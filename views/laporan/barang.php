@@ -1,0 +1,170 @@
+<?php
+
+include_once '../../layout/header.php';
+
+$filter_kategori = isset($_GET['id_kategori']) && $_GET['id_kategori'] !== '' ? (int)$_GET['id_kategori'] : '';
+$filter_kondisi  = isset($_GET['kondisi']) && $_GET['kondisi'] !== '' ? mysqli_real_escape_string($db, $_GET['kondisi']) : '';
+
+$where_clauses = [];
+if ($filter_kategori !== '') {
+    $where_clauses[] = "b.id_kategori = $filter_kategori";
+}
+if ($filter_kondisi !== '') {
+    $where_clauses[] = "b.kondisi = '$filter_kondisi'";
+}
+
+$where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
+
+$data_barang = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi 
+                              FROM barang b 
+                              LEFT JOIN kategori k ON b.id_kategori = k.id_kategori 
+                              LEFT JOIN lokasi l ON b.id_lokasi = l.id_lokasi 
+                              $where_sql 
+                              ORDER BY b.nama_barang ASC");
+
+$data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori ASC");
+
+?>
+
+<!-- html2pdf.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Laporan Data Barang</h1>
+            <p class="text-muted">Rekapitulasi inventaris seluruh barang, stok, dan kondisinya</p>
+        </div>
+        <div>
+            <!-- Tombol Utama Export to PDF -->
+            <button type="button" onclick="exportLaporanPDF()" class="btn btn-danger shadow-sm">
+                <i class="bi bi-file-earmark-pdf-fill me-1"></i> Export to PDF
+            </button>
+        </div>
+    </div>
+    <hr>
+
+    <!-- Filter Form -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <form action="" method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Filter Kategori</label>
+                    <select name="id_kategori" class="form-select">
+                        <option value="">-- Semua Kategori --</option>
+                        <?php foreach ($data_kategori as $k) : ?>
+                            <option value="<?= $k['id_kategori']; ?>" <?= ($filter_kategori == $k['id_kategori']) ? 'selected' : ''; ?>>
+                                <?= htmlspecialchars($k['nama_kategori']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Filter Kondisi</label>
+                    <select name="kondisi" class="form-select">
+                        <option value="">-- Semua Kondisi --</option>
+                        <option value="layak" <?= ($filter_kondisi === 'layak') ? 'selected' : ''; ?>>Layak</option>
+                        <option value="tidak_layak" <?= ($filter_kondisi === 'tidak_layak') ? 'selected' : ''; ?>>Tidak Layak</option>
+                        <option value="perbaikan" <?= ($filter_kondisi === 'perbaikan') ? 'selected' : ''; ?>>Perbaikan</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-filter me-1"></i> Filter</button>
+                    <a href="barang.php" class="btn btn-secondary"><i class="bi bi-arrow-clockwise me-1"></i> Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Printable & Exportable Area -->
+    <div class="card shadow-sm" id="area-laporan">
+        <div class="card-body p-4">
+            <!-- Kop Laporan untuk Hasil PDF -->
+            <div class="text-center mb-4 d-none" id="kop-laporan">
+                <h3 class="fw-bold mb-1">LAPORAN INVENTARIS BARANG</h3>
+                <p class="text-muted mb-0">Sistem Manajemen & Pengelolaan Sarana Prasarana</p>
+                <small>Tanggal Export: <?= date('d F Y, H:i'); ?> WIB</small>
+                <hr style="border-top: 2px solid #000; margin-top: 10px;">
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th width="5%">No</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Barang</th>
+                            <th>Kategori</th>
+                            <th>Lokasi</th>
+                            <th>Stok</th>
+                            <th>Satuan</th>
+                            <th>Kondisi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        <?php if (empty($data_barang)) : ?>
+                            <tr>
+                                <td colspan="8" class="text-muted py-4">Data tidak ditemukan.</td>
+                            </tr>
+                        <?php else : ?>
+                            <?php $no = 1; $total_stok = 0; ?>
+                            <?php foreach ($data_barang as $b) : $total_stok += (int)$b['stok']; ?>
+                                <tr>
+                                    <td><?= $no++; ?></td>
+                                    <td class="fw-bold"><?= htmlspecialchars($b['kode_barang']); ?></td>
+                                    <td class="text-start"><?= htmlspecialchars($b['nama_barang']); ?></td>
+                                    <td><?= htmlspecialchars($b['nama_kategori'] ?? '-'); ?></td>
+                                    <td><?= htmlspecialchars($b['nama_lokasi'] ?? '-'); ?></td>
+                                    <td class="fw-bold"><?= $b['stok']; ?></td>
+                                    <td><?= htmlspecialchars($b['satuan']); ?></td>
+                                    <td><?= ucfirst($b['kondisi']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <tr class="table-light fw-bold">
+                                <td colspan="5" class="text-end">Total Unit Stok:</td>
+                                <td colspan="3" class="text-start"><?= $total_stok; ?> Unit</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tanda Tangan Khusus PDF -->
+            <div class="row mt-4 d-none" id="ttd-laporan">
+                <div class="col-6"></div>
+                <div class="col-6 text-center">
+                    <p class="mb-4">Mengetahui,<br><strong>Kepala Bagian Sarana & Prasarana</strong></p>
+                    <p class="mt-4 fw-bold text-decoration-underline">( .................................................. )</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportLaporanPDF() {
+    const kop = document.getElementById('kop-laporan');
+    const ttd = document.getElementById('ttd-laporan');
+    
+    // Tampilkan kop dan ttd saat proses convert ke PDF
+    kop.classList.remove('d-none');
+    ttd.classList.remove('d-none');
+
+    const element = document.getElementById('area-laporan');
+    const opt = {
+        margin:       10,
+        filename:     'Laporan_Data_Barang_<?= date("Ymd_His"); ?>.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        // Sembunyikan kembali kop dan ttd di tampilan layar biasa
+        kop.classList.add('d-none');
+        ttd.classList.add('d-none');
+    });
+}
+</script>
+
+<?php include_once '../../layout/footer.php'; ?>
