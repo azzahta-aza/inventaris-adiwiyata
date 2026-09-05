@@ -1,4 +1,3 @@
-<h1>update data</h1>
 <?php 
 
 include '../../layout/header.php';
