@@ -95,7 +95,10 @@ jobs:
           echo "================================================="
           echo " Starting automated deployment on $(hostname)..."
           echo "================================================="
-          TARGET_DIR="${{ secrets.SERVER_PATH || '/var/www/html/inventory' }}"
+          TARGET_DIR="/var/www/inventaris_adiwiyata"
+          if [ -n "${{ secrets.SERVER_PATH }}" ] && [ -d "${{ secrets.SERVER_PATH }}" ]; then
+            TARGET_DIR="${{ secrets.SERVER_PATH }}"
+          fi
           echo "Target deployment directory: $TARGET_DIR"
 
           if [ ! -d "$TARGET_DIR" ]; then
