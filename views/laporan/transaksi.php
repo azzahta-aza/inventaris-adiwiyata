@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'kepala']);
+
 include_once '../../layout/header.php';
 
 $tgl_mulai  = isset($_GET['tgl_mulai']) && $_GET['tgl_mulai'] !== '' ? mysqli_real_escape_string($db, $_GET['tgl_mulai']) : '';
@@ -33,11 +36,11 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
 <!-- html2pdf.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Laporan Transaksi Barang</h1>
-            <p class="text-muted">Rekapitulasi mutasi barang masuk (pembelian/restock) dan barang keluar</p>
+            <p class="text-muted small mb-0">Rekapitulasi mutasi barang masuk (pembelian/restock) dan barang keluar</p>
         </div>
         <div>
             <button type="button" onclick="exportLaporanPDF()" class="btn btn-danger shadow-sm">
@@ -45,7 +48,6 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
             </button>
         </div>
     </div>
-    <hr>
 
     <!-- Filter Form -->
     <div class="card mb-4 shadow-sm">

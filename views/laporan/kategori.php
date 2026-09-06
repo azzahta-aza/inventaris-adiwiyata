@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'kepala']);
+
 include_once '../../layout/header.php';
 
 $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok 
@@ -13,11 +16,11 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
 <!-- html2pdf.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Laporan Master Kategori</h1>
-            <p class="text-muted">Rekapitulasi kategori barang inventaris beserta total jenis barang dan stok</p>
+            <p class="text-muted small mb-0">Rekapitulasi kategori barang inventaris beserta total jenis barang dan stok</p>
         </div>
         <div>
             <button type="button" onclick="exportLaporanPDF()" class="btn btn-danger shadow-sm">
@@ -25,7 +28,6 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
             </button>
         </div>
     </div>
-    <hr>
 
     <div class="card shadow-sm" id="area-laporan">
         <div class="card-body p-4">

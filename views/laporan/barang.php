@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'kepala']);
+
 include_once '../../layout/header.php';
 
 $filter_kategori = isset($_GET['id_kategori']) && $_GET['id_kategori'] !== '' ? (int)$_GET['id_kategori'] : '';
@@ -29,11 +32,11 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
 <!-- html2pdf.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Laporan Data Barang</h1>
-            <p class="text-muted">Rekapitulasi inventaris seluruh barang, stok, dan kondisinya</p>
+            <p class="text-muted small mb-0">Rekapitulasi inventaris seluruh barang, stok, dan kondisinya</p>
         </div>
         <div>
             <!-- Tombol Utama Export to PDF -->
@@ -42,7 +45,6 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
             </button>
         </div>
     </div>
-    <hr>
 
     <!-- Filter Form -->
     <div class="card mb-4 shadow-sm">

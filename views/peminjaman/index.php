@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'petugas']);
+
 include_once '../../layout/header.php';
 
 // Ambil data peminjaman dengan JOIN ke barang dan users
@@ -11,17 +14,16 @@ $data_peminjaman = select_peminjaman("SELECT p.*, b.kode_barang, b.nama_barang, 
 
 ?>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Data Peminjaman Barang</h1>
-            <p class="text-muted">Kelola transaksi peminjaman dan pengembalian barang inventaris</p>
+            <p class="text-muted small mb-0">Kelola transaksi peminjaman dan pengembalian barang inventaris</p>
         </div>
         <a href="tambah.php" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i> Pinjam Barang
         </a>
     </div>
-    <hr>
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -70,7 +72,7 @@ $data_peminjaman = select_peminjaman("SELECT p.*, b.kode_barang, b.nama_barang, 
                                     <td class="text-center">
                                         <?= !empty($pinjam['kondisi_kembali']) ? htmlspecialchars($pinjam['kondisi_kembali']) : '<span class="text-muted">-</span>'; ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center text-nowrap">
                                         <?php if ($pinjam['status'] === 'dipinjam') : ?>
                                             <a href="pengembalian.php?id_pinjam=<?= $pinjam['id_pinjam']; ?>" class="btn btn-sm btn-info text-white me-1" title="Proses Pengembalian">
                                                 <i class="bi bi-box-arrow-in-left"></i> Kembali

@@ -1,6 +1,7 @@
 <?php
 
 include_once '../../app/app.php';
+check_role(['admin', 'petugas']);
 
 $id_transaksi = (int)$_GET['id_transaksi'];
 

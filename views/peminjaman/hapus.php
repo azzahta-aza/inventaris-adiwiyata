@@ -1,6 +1,7 @@
 <?php
 
 include_once '../../app/app.php';
+check_role(['admin', 'petugas']);
 
 $id_pinjam = (int)$_GET['id_pinjam'];
 

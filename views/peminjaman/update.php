@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'petugas']);
+
 include_once '../../layout/header.php';
 
 $id_pinjam = (int)$_GET['id_pinjam'];
@@ -35,7 +38,7 @@ if (isset($_POST['ubah'])) {
 
 ?>
 
-<div class="container mt-5 mb-5">
+<div class="container-fluid py-2">
     <div class="card shadow-sm">
         <div class="card-header bg-success text-white">
             <h4 class="card-title mb-0"><i class="bi bi-pencil-square me-2"></i>Edit Data Peminjaman</h4>
@@ -70,7 +73,7 @@ if (isset($_POST['ubah'])) {
                 </div>
 
                 <hr>
-                <div class="d-flex justify-content-between">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <a href="index.php" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i> Kembali</a>
                     <button type="submit" name="ubah" class="btn btn-success"><i class="bi bi-save me-1"></i> Simpan Perubahan</button>
                 </div>

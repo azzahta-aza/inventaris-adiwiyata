@@ -1,6 +1,7 @@
 <?php
 
 include_once '../../app/app.php';
+check_role('admin');
 
 $id_lokasi = (int)$_GET['id_lokasi'];
 

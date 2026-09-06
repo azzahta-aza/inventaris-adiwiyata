@@ -5,7 +5,7 @@ include_once '../../app/app.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = login($_POST);
     if ($res === 1) {
-        header('Location: ../barang/index.php');
+        header('Location: ' . get_landing_url('..'));
         exit;
     } elseif ($res === -1) {
         echo "<script>alert('Maaf, Login Gagal, Password anda tidak sesuai!'); document.location='login.php';</script>";

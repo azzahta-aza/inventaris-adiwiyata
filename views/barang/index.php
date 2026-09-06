@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role('admin');
+
 include_once '../../layout/header.php';
 
 // Ambil data barang dengan LEFT JOIN agar nama_kategori dan nama_lokasi tampil
@@ -11,17 +14,16 @@ $data_barang = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi
 
 ?>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Data Master Barang</h1>
-            <p class="text-muted">Kelola data barang inventaris beserta kategori dan lokasi</p>
+            <p class="text-muted small mb-0">Kelola data barang inventaris beserta kategori dan lokasi</p>
         </div>
         <a href="tambah.php" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i> Tambah Barang
         </a>
     </div>
-    <hr>
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -80,7 +82,7 @@ $data_barang = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi
                                             <span class="badge bg-danger">Tidak Layak</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center text-nowrap">
                                         <a href="update.php?id_barang=<?= $barang['id_barang']; ?>" class="btn btn-sm btn-success">
                                             <i class="bi bi-pencil-square"></i> Edit
                                         </a>

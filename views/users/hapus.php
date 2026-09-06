@@ -1,6 +1,7 @@
 <?php
 
 include_once '../../app/app.php';
+check_role('admin');
 
 $id_user = (int)$_GET['id_user'];
 $result = delete_user($id_user);

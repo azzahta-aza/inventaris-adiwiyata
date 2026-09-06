@@ -1,33 +1,60 @@
 <?php
-require_once __DIR__ . '../../../../app/koneksi.php';
+require_once __DIR__ . '/../../../app/koneksi.php';
 
-// Data akun seed yang akan dibuat
-$nama = 'Admin';
-$username = 'admin';
-$password = 'admin123'; // Kata sandi asli
-$role     = 'admin';
+// Data akun seed yang akan dibuat (Default password: admin123)
+$seed_users = [
+    [
+        'nama'     => 'Administrator',
+        'username' => 'admin',
+        'password' => 'admin123',
+        'role'     => 'Admin'
+    ],
+    [
+        'nama'     => 'Petugas Gudang',
+        'username' => 'petugas',
+        'password' => 'admin123',
+        'role'     => 'Petugas'
+    ],
+    [
+        'nama'     => 'Kepala Bagian',
+        'username' => 'kepala',
+        'password' => 'admin123',
+        'role'     => 'Kepala'
+    ]
+];
 
-// Enkripsi password secara aman
-$password_terenkripsi = password_hash($password, PASSWORD_BCRYPT);
+echo "<h3>Seeding Users...</h3>";
 
-// Cek apakah username sudah ada agar tidak duplikat
-$cek_user = mysqli_query($db, "SELECT id_user FROM users WHERE username = '$username'");
+foreach ($seed_users as $user) {
+    $nama     = mysqli_real_escape_string($db, $user['nama']);
+    $username = mysqli_real_escape_string($db, $user['username']);
+    $password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
+    $role     = mysqli_real_escape_string($db, $user['role']);
 
-if (mysqli_num_rows($cek_user) > 0) {
-    echo "Gagal: Akun seed dengan username '$username' sudah ada!";
-} else {
-    // Query insert data
-    $query = "INSERT INTO users (nama, username, password, role) 
-              VALUES ('$nama','$username', '$password', '$role')";
+    // Cek apakah username sudah ada
+    $cek_user = mysqli_query($db, "SELECT id_user FROM users WHERE username = '$username'");
 
-    if (mysqli_query($db, $query)) {
-        echo "Sukses: Akun seed berhasil dibuat!<br>";
-        echo "Username: " . $username . "<br>";
-        echo "Password: " . $password;
+    if (mysqli_num_rows($cek_user) > 0) {
+        // Update password & role jika sudah ada
+        $update_query = "UPDATE users SET nama = '$nama', password = '$password_hash', role = '$role' WHERE username = '$username'";
+        if (mysqli_query($db, $update_query)) {
+            echo "Sukses update akun: <strong>$username</strong> (Role: $role)<br>";
+        } else {
+            echo "Gagal update akun $username: " . mysqli_error($db) . "<br>";
+        }
     } else {
-        echo "Gagal membuat akun: " . mysqli_error($db);
+        // Query insert data
+        $insert_query = "INSERT INTO users (nama, username, password, role) 
+                         VALUES ('$nama', '$username', '$password_hash', '$role')";
+
+        if (mysqli_query($db, $insert_query)) {
+            echo "Sukses tambah akun: <strong>$username</strong> (Role: $role)<br>";
+        } else {
+            echo "Gagal membuat akun $username: " . mysqli_error($db) . "<br>";
+        }
     }
 }
 
 // Tutup koneksi
 mysqli_close($db);
+echo "<p>Seeding selesai!</p>";

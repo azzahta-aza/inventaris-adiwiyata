@@ -1,5 +1,8 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'petugas']);
+
 include_once '../../layout/header.php';
 
 // Ambil data transaksi dengan JOIN ke barang dan users
@@ -11,17 +14,16 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
 
 ?>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Riwayat Transaksi Barang</h1>
-            <p class="text-muted">Pencatatan mutasi barang masuk (pembelian/restock) dan barang keluar</p>
+            <p class="text-muted small mb-0">Pencatatan mutasi barang masuk (pembelian/restock) dan barang keluar</p>
         </div>
         <a href="tambah.php" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i> Catat Transaksi
         </a>
     </div>
-    <hr>
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -66,7 +68,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                                     </td>
                                     <td><?= htmlspecialchars($tr['keterangan']); ?></td>
                                     <td><?= htmlspecialchars($tr['nama_petugas'] ?? 'Petugas'); ?></td>
-                                    <td class="text-center">
+                                    <td class="text-center text-nowrap">
                                         <a href="hapus.php?id_transaksi=<?= $tr['id_transaksi']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus riwayat transaksi ini? Mutasi stok akan dibatalkan.');" title="Hapus Transaksi">
                                             <i class="bi bi-trash"></i>
                                         </a>

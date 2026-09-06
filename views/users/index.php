@@ -1,22 +1,24 @@
 <?php
 
+include_once '../../app/app.php';
+check_role('admin');
+
 include_once '../../layout/header.php';
 
 $data_users = select_users("SELECT * FROM users ORDER BY id_user DESC");
 
 ?>
 
-<div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Manajemen Pengguna (Users)</h1>
-            <p class="text-muted">Kelola hak akses dan akun pengguna sistem inventaris</p>
+            <p class="text-muted small mb-0">Kelola hak akses dan akun pengguna sistem inventaris</p>
         </div>
         <a href="tambah.php" class="btn btn-primary">
             <i class="bi bi-person-plus me-1"></i> Tambah Pengguna
         </a>
     </div>
-    <hr>
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -55,7 +57,7 @@ $data_users = select_users("SELECT * FROM users ORDER BY id_user DESC");
                                             <span class="badge bg-success">Kepala</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center text-nowrap">
                                         <a href="update.php?id_user=<?= $user['id_user']; ?>" class="btn btn-sm btn-success me-1">
                                             <i class="bi bi-pencil-square"></i> Edit
                                         </a>

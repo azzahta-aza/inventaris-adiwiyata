@@ -1,10 +1,13 @@
 <?php
 
+include_once '../../app/app.php';
+check_role(['admin', 'petugas']);
+
 include_once '../../layout/header.php';
 
 // Ambil data barang yang stoknya > 0 dan kondisinya layak
 $data_barang = select_barang("SELECT * FROM barang WHERE stok > 0 AND kondisi = 'layak' ORDER BY nama_barang ASC");
-$data_users  = select_users("SELECT * FROM users ORDER BY nama ASC");
+$data_users  = has_role('admin') ? select_users("SELECT * FROM users ORDER BY nama ASC") : [];
 
 if (isset($_POST['pinjam'])) {
     $result = create_peminjaman($_POST);
@@ -27,7 +30,7 @@ if (isset($_POST['pinjam'])) {
 
 ?>
 
-<div class="container mt-5 mb-5">
+<div class="container-fluid py-2">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
             <h4 class="card-title mb-0"><i class="bi bi-box-arrow-right me-2"></i>Form Tambah Peminjaman Barang</h4>
@@ -69,25 +72,26 @@ if (isset($_POST['pinjam'])) {
                         <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" placeholder="1" required>
                     </div>
 
-                    <!-- Dropdown Petugas (Opsional jika ada users) -->
+                    <!-- Petugas Pencatat -->
                     <div class="col-md-4 mb-3">
                         <label for="id_user" class="form-label fw-bold">Petugas Pencatat</label>
-                        <select class="form-select" id="id_user" name="id_user">
-                            <?php if (empty($data_users)) : ?>
-                                <option value="1">Petugas Default</option>
-                            <?php else : ?>
+                        <?php if (has_role('admin') && !empty($data_users)) : ?>
+                            <select class="form-select" id="id_user" name="id_user">
                                 <?php foreach ($data_users as $user) : ?>
-                                    <option value="<?= $user['id_user']; ?>">
+                                    <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
                                         <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
                                     </option>
                                 <?php endforeach; ?>
-                            <?php endif; ?>
-                        </select>
+                            </select>
+                        <?php else : ?>
+                            <input type="text" class="form-control" value="<?= htmlspecialchars($_SESSION['nama'] ?? 'Petugas'); ?> (<?= htmlspecialchars(ucfirst($_SESSION['role'] ?? 'Petugas')); ?>)" readonly>
+                            <input type="hidden" name="id_user" value="<?= (int)($_SESSION['id_user'] ?? 1); ?>">
+                        <?php endif; ?>
                     </div>
                 </div>
 
                 <hr>
-                <div class="d-flex justify-content-between">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <a href="index.php" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i> Kembali</a>
                     <button type="submit" name="pinjam" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i> Proses Peminjaman</button>
                 </div>

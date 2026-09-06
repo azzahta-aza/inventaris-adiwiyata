@@ -2,9 +2,9 @@
 
 include_once '../../app/app.php';
 
-// Jika sudah login, langsung arahkan ke halaman utama barang
+// Jika sudah login, langsung arahkan ke halaman utama sesuai role
 if (isset($_SESSION['login']) && $_SESSION['login'] === true) {
-    header('Location: ../barang/index.php');
+    header('Location: ' . get_landing_url('..'));
     exit;
 }
 
@@ -13,7 +13,7 @@ $pesan_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = login($_POST);
     if ($res === 1) {
-        header('Location: ../barang/index.php');
+        header('Location: ' . get_landing_url('..'));
         exit;
     } elseif ($res === -1) {
         $pesan_error = 'Maaf, Login Gagal, Password anda tidak sesuai!';

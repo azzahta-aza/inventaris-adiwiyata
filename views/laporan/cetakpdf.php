@@ -1,6 +1,7 @@
 <?php
 
 include_once '../../app/app.php';
+check_role(['admin', 'kepala']);
 
 $tipe = $_GET['tipe'] ?? 'barang';
 
@@ -112,6 +113,12 @@ if ($tipe === 'peminjaman') {
             margin-bottom: 20px;
             padding-bottom: 12px;
         }
+        @media (max-width: 768px) {
+            .page-container {
+                margin: 10px;
+                padding: 18px 15px;
+            }
+        }
         @media print {
             .no-print { display: none !important; }
             body { background: #fff; }
@@ -122,14 +129,14 @@ if ($tipe === 'peminjaman') {
 <body>
 
 <div class="container no-print mt-3 text-center">
-    <div class="d-inline-flex gap-2">
-        <button onclick="downloadPDF()" class="btn btn-danger btn-lg shadow-sm">
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+        <button onclick="downloadPDF()" class="btn btn-danger shadow-sm">
             <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF Sekarang
         </button>
-        <button onclick="window.print()" class="btn btn-outline-dark btn-lg shadow-sm">
+        <button onclick="window.print()" class="btn btn-outline-dark shadow-sm">
             <i class="bi bi-printer me-2"></i>Cetak / Print
         </button>
-        <button onclick="window.close()" class="btn btn-secondary btn-lg shadow-sm">
+        <button onclick="window.close()" class="btn btn-secondary shadow-sm">
             <i class="bi bi-x-circle me-1"></i>Tutup
         </button>
     </div>
