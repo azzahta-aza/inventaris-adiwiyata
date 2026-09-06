@@ -22,12 +22,13 @@ if (file_exists($envPath) && is_readable($envPath)) {
     }
 }
 
-$db_host = getenv('DB_HOST') ?: 'localhost';
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
+$db_port = (int)(getenv('DB_PORT') ?: 3306);
 $db_user = getenv('DB_USER') ?: 'root';
 $db_pass = getenv('DB_PASS') ?: '';
 $db_name = getenv('DB_NAME') ?: 'inventory';
 
-$db = mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+$db = mysqli_connect($db_host, $db_user, $db_pass, $db_name, $db_port);
 
 if (!$db) {
     die("Koneksi database gagal: " . mysqli_connect_error());

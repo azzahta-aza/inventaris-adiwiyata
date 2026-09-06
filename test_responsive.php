@@ -3,8 +3,6 @@
 // Script Verifikasi Responsiveness & Viewport Matrix
 error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 
-require_once __DIR__ . '/app/app.php';
-
 $viewports = [
     '320px'  => ['type' => 'mobile',  'width' => 320,  'desc' => 'iPhone SE / Small Mobile'],
     '375px'  => ['type' => 'mobile',  'width' => 375,  'desc' => 'iPhone Mini / Modern Small'],

@@ -11,6 +11,12 @@ jobs:
   test:
     name: Test & Quality Gate
     runs-on: ubuntu-latest
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: inventory
 
     services:
       mysql:
