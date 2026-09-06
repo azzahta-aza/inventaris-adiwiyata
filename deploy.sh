@@ -22,6 +22,7 @@ echo "Waktu Mulai: $(date '+%Y-%m-%d %H:%M:%S')"
 # 1. Tentukan Direktori Proyek
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
+git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
 echo -e "${GREEN}[1/5] Lokasi proyek: $PROJECT_DIR${NC}"
 
 # 2. Verifikasi Git Repository

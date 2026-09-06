@@ -105,6 +105,7 @@ jobs:
           fi
 
           cd "$TARGET_DIR"
+          git config --global --add safe.directory "$TARGET_DIR" 2>/dev/null || true
           echo "Menyelaraskan kode dengan branch main..."
           git fetch origin main
           git reset --hard origin/main
