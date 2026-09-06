@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test:
     name: Test & Quality Gate
@@ -91,6 +94,8 @@ jobs:
 
     steps:
       - name: Deploy Code on Armbian Server
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "================================================="
           echo " Starting automated deployment on $(hostname)..."
@@ -110,6 +115,7 @@ jobs:
           cd "$TARGET_DIR"
           git config --global --add safe.directory "$TARGET_DIR" 2>/dev/null || true
           echo "Menyelaraskan kode dengan branch main..."
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git fetch origin main
           git reset --hard origin/main
 
