@@ -1,0 +1,148 @@
+name: CI/CD Inventory Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test & Quality Gate
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: inventory
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, pdo_mysql, gd, mbstring, json
+          coverage: none
+
+      - name: Verify PHP Syntax (Linting)
+        run: |
+          echo "=== 1. CHECKING PHP SYNTAX ==="
+          ERRORS=0
+          while IFS= read -r file; do
+            php -l "$file" || ERRORS=$((ERRORS+1))
+          done < <(find . -type f -name "*.php" -not -path "./vendor/*")
+          if [ $ERRORS -ne 0 ]; then
+            echo "Linting failed with $ERRORS syntax errors!"
+            exit 1
+          fi
+          echo "All PHP files have valid syntax."
+
+      - name: Initialize Database Schema
+        run: |
+          echo "=== 2. INITIALIZING MYSQL SCHEMA ==="
+          mysql -h 127.0.0.1 -u root -proot inventory < database.sql
+          echo "Database schema imported successfully."
+
+      - name: Run RBAC Security Test Suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: inventory
+        run: |
+          echo "=== 3. RUNNING RBAC SECURITY TESTS ==="
+          php test_rbac.php
+
+      - name: Run Dashboard Role-Aware Test Suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: inventory
+        run: |
+          echo "=== 4. RUNNING DASHBOARD ROLE-AWARE TESTS ==="
+          php test_dashboard.php
+
+      - name: Run Responsive Layout Audit Test Suite
+        run: |
+          echo "=== 5. RUNNING RESPONSIVE VIEWPORT TESTS ==="
+          php test_responsive.php
+
+  deploy:
+    name: Automated Server Deployment
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check Deployment Configuration
+        id: check_config
+        run: |
+          if [ -n "${{ secrets.SERVER_HOST }}" ]; then
+            echo "DEPLOY_METHOD=ssh" >> $GITHUB_ENV
+            echo "SSH deployment credentials detected."
+          elif [ -n "${{ secrets.DEPLOY_WEBHOOK_URL }}" ]; then
+            echo "DEPLOY_METHOD=webhook" >> $GITHUB_ENV
+            echo "Webhook deployment URL detected."
+          else
+            echo "DEPLOY_METHOD=none" >> $GITHUB_ENV
+            echo "::notice::Neither SERVER_HOST nor DEPLOY_WEBHOOK_URL is set in GitHub Secrets. CI tests passed successfully! To enable automatic server deployment, configure GitHub Secrets in Repository Settings -> Secrets and variables -> Actions."
+          fi
+
+      - name: Deploy to Server via SSH
+        if: env.DEPLOY_METHOD == 'ssh'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            echo "Starting server deployment on $(hostname)..."
+            cd ${{ secrets.SERVER_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            if [ -f "deploy.sh" ]; then
+              chmod +x deploy.sh
+              ./deploy.sh
+            fi
+            echo "Server deployment completed successfully at $(date)!"
+
+      - name: Trigger Deployment Webhook (Alternative)
+        if: env.DEPLOY_METHOD == 'webhook'
+        env:
+          WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          echo "Triggering deployment webhook on server..."
+          PAYLOAD='{"ref":"refs/heads/main","event":"push","timestamp":"'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}'
+          if [ -n "$WEBHOOK_SECRET" ]; then
+            SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.* //')
+            HEADER_SIG="X-Hub-Signature-256: sha256=$SIGNATURE"
+          else
+            HEADER_SIG="X-Deployment: inventory"
+          fi
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -H "$HEADER_SIG" \
+            -d "$PAYLOAD" \
+            "$WEBHOOK_URL")
+          echo "Webhook response status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Webhook deployment returned non-2xx status: $HTTP_CODE"
+            exit 1
+          fi
+          echo "Webhook deployment triggered successfully!"

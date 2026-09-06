@@ -1,0 +1,24 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Server Deployment logs & locks
+deploy.log
+deploy.lock
+
+# Web server & PHP logs
+*.log
+error_log
+access_log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

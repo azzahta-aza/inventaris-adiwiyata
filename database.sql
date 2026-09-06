@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `transaksi` (
 
 -- Sample Data Initial Users (Password: admin123)
 INSERT INTO `users` (`id_user`, `nama`, `username`, `password`, `role`) VALUES
-(1, 'Administrator', 'admin', '$2y$10$w8T0M4j6l8V01fKkQnZxe.v8w.dC3Z0aVw4hQ2vXGZz5B/F2H0n7a', 'Admin'),
-(2, 'Petugas Gudang', 'petugas', '$2y$10$w8T0M4j6l8V01fKkQnZxe.v8w.dC3Z0aVw4hQ2vXGZz5B/F2H0n7a', 'Petugas'),
-(3, 'Kepala Bagian', 'kepala', '$2y$10$w8T0M4j6l8V01fKkQnZxe.v8w.dC3Z0aVw4hQ2vXGZz5B/F2H0n7a', 'Kepala')
+(1, 'Administrator', 'admin', '$2y$10$JAmK6DtgPIgXx5EH0BIC7OeNvr.0diN5w0aea0y9GmdihRHWfL1ra', 'Admin'),
+(2, 'Petugas Gudang', 'petugas', '$2y$10$JAmK6DtgPIgXx5EH0BIC7OeNvr.0diN5w0aea0y9GmdihRHWfL1ra', 'Petugas'),
+(3, 'Kepala Bagian', 'kepala', '$2y$10$JAmK6DtgPIgXx5EH0BIC7OeNvr.0diN5w0aea0y9GmdihRHWfL1ra', 'Kepala')
 ON DUPLICATE KEY UPDATE `id_user`=`id_user`;
