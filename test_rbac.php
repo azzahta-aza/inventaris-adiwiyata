@@ -194,8 +194,7 @@ assert_test("Admin akses views/laporan/cetakpdf.php diizinkan (200)", $adm_pdf['
 
 echo "\n=== 5. TEST NAVBAR MENU FILTERING HTML ===\n";
 function get_navbar_html($role) {
-    $script = "session_start(); \$_SESSION['login'] = true; \$_SESSION['role'] = '$role'; \$_SESSION['nama'] = '$role'; \$_SERVER['PHP_SELF'] = '/views/transaksi/index.php'; ob_start(); include 'layout/header.php'; \$out = ob_get_clean(); echo \$out;";
-    return shell_exec("php -r \"$script\" 2>&1");
+    return shell_exec("php run_request.php layout/header.php \"$role\"");
 }
 
 $nav_petugas = get_navbar_html('Petugas');
