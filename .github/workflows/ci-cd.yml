@@ -87,68 +87,33 @@ jobs:
     name: Automated Server Deployment
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Check Deployment Configuration
-        id: check_config
+      - name: Deploy Code on Armbian Server
         run: |
-          if [ -n "${{ secrets.SERVER_HOST }}" ]; then
-            echo "DEPLOY_METHOD=ssh" >> $GITHUB_ENV
-            echo "SSH deployment credentials detected."
-          elif [ -n "${{ secrets.DEPLOY_WEBHOOK_URL }}" ]; then
-            echo "DEPLOY_METHOD=webhook" >> $GITHUB_ENV
-            echo "Webhook deployment URL detected."
-          else
-            echo "DEPLOY_METHOD=none" >> $GITHUB_ENV
-            echo "::notice::Neither SERVER_HOST nor DEPLOY_WEBHOOK_URL is set in GitHub Secrets. CI tests passed successfully! To enable automatic server deployment, configure GitHub Secrets in Repository Settings -> Secrets and variables -> Actions."
-          fi
+          echo "================================================="
+          echo " Starting automated deployment on $(hostname)..."
+          echo "================================================="
+          TARGET_DIR="${{ secrets.SERVER_PATH || '/var/www/html/inventory' }}"
+          echo "Target deployment directory: $TARGET_DIR"
 
-      - name: Deploy to Server via SSH
-        if: env.DEPLOY_METHOD == 'ssh'
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          script: |
-            echo "Starting server deployment on $(hostname)..."
-            cd ${{ secrets.SERVER_PATH }}
-            git fetch origin main
-            git reset --hard origin/main
-            if [ -f "deploy.sh" ]; then
-              chmod +x deploy.sh
-              ./deploy.sh
-            fi
-            echo "Server deployment completed successfully at $(date)!"
-
-      - name: Trigger Deployment Webhook (Alternative)
-        if: env.DEPLOY_METHOD == 'webhook'
-        env:
-          WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
-          WEBHOOK_SECRET: ${{ secrets.DEPLOY_SECRET }}
-        run: |
-          echo "Triggering deployment webhook on server..."
-          PAYLOAD='{"ref":"refs/heads/main","event":"push","timestamp":"'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}'
-          if [ -n "$WEBHOOK_SECRET" ]; then
-            SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.* //')
-            HEADER_SIG="X-Hub-Signature-256: sha256=$SIGNATURE"
-          else
-            HEADER_SIG="X-Deployment: inventory"
-          fi
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -H "$HEADER_SIG" \
-            -d "$PAYLOAD" \
-            "$WEBHOOK_URL")
-          echo "Webhook response status: $HTTP_CODE"
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "Webhook deployment returned non-2xx status: $HTTP_CODE"
+          if [ ! -d "$TARGET_DIR" ]; then
+            echo "[ERROR] Direktori $TARGET_DIR tidak ditemukan di server!"
+            echo "Pastikan project sudah di-clone di $TARGET_DIR."
             exit 1
           fi
-          echo "Webhook deployment triggered successfully!"
+
+          cd "$TARGET_DIR"
+          echo "Menyelaraskan kode dengan branch main..."
+          git fetch origin main
+          git reset --hard origin/main
+
+          if [ -f "deploy.sh" ]; then
+            chmod +x deploy.sh
+            ./deploy.sh
+          fi
+
+          echo "================================================="
+          echo " Server deployment completed at $(date)!"
+          echo "================================================="
