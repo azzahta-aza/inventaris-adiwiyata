@@ -17,15 +17,15 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_USER: root
-      DB_PASS: root
+      DB_USER: admin_inventaris
+      DB_PASS: PassInventarisUKK2026
       DB_NAME: inventory
 
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_PASSWORD: PassInventarisUKK2026
           MYSQL_DATABASE: inventory
         ports:
           - 3306:3306
@@ -58,14 +58,14 @@ jobs:
       - name: Initialize Database Schema
         run: |
           echo "=== 2. INITIALIZING MYSQL SCHEMA ==="
-          mysql -h 127.0.0.1 -u root -proot inventory < database.sql
+          mysql -h 127.0.0.1 -u admin_inventaris -pPassInventarisUKK2026 inventory < database.sql
           echo "Database schema imported successfully."
 
       - name: Run RBAC Security Test Suite
         env:
           DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASS: root
+          DB_USER: admin_inventaris
+          DB_PASS: PassInventarisUKK2026
           DB_NAME: inventory
         run: |
           echo "=== 3. RUNNING RBAC SECURITY TESTS ==="
@@ -74,8 +74,8 @@ jobs:
       - name: Run Dashboard Role-Aware Test Suite
         env:
           DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASS: root
+          DB_USER: admin_inventaris
+          DB_PASS: PassInventarisUKK2026
           DB_NAME: inventory
         run: |
           echo "=== 4. RUNNING DASHBOARD ROLE-AWARE TESTS ==="
