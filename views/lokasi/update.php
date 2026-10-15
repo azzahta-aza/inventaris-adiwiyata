@@ -1,28 +1,53 @@
-<?php 
+<?php
 
 include_once '../../app/app.php';
-check_role('admin');
 
-include '../../layout/header.php';
+check_role(['admin', 'petugas']);
 
-$id_lokasi = (int)$_GET['id_lokasi'];
+$id_lokasi = (int)($_GET['id_lokasi'] ?? 0);
 
-$lokasi = select_lokasi("SELECT * FROM lokasi WHERE id_lokasi = $id_lokasi")[0];
+$lokasi_data = select_lokasi(
+    "SELECT * FROM lokasi WHERE id_lokasi = $id_lokasi"
+);
 
-//chek apakah tombol ubah ditekan
+if (empty($lokasi_data)) {
+    header('Location: index.php?status=not_found');
+    exit;
+}
+
+$lokasi = $lokasi_data[0];
+
+// Cek apakah tombol ubah ditekan
 if (isset($_POST['ubah'])) {
-    if (update_lokasi($_POST) > 0) {
-         echo "<script> 
-                alert('Data Lokasi Berhasil Diubahkan');
-                document.location.href = 'index.php';
-                </script>";
+
+    $token_sesi = $_SESSION['csrf_token'] ?? '';
+    $token_form = $_POST['csrf_token'] ?? '';
+
+    if (
+        !is_string($token_sesi) ||
+        !is_string($token_form) ||
+        $token_sesi === '' ||
+        !hash_equals($token_sesi, $token_form)
+    ) {
+        http_response_code(403);
+        exit('Permintaan tidak valid. Silakan muat ulang halaman.');
+    }
+
+    $hasil = update_lokasi($_POST);
+
+    if ($hasil === 1) {
+        header('Location: index.php?edit_status=success');
+        exit;
+    } elseif ($hasil === -2) {
+        header('Location: index.php?edit_status=duplicate');
+        exit;
     } else {
-         echo "<script>
-                alert('Data Lokasi Gagal Ditambahkan');
-                document.location.href = 'index.php';
-                </script>";
+        header('Location: index.php?edit_status=failed');
+        exit;
     }
 }
+
+include '../../layout/header.php';
 
 ?>
 
@@ -35,6 +60,9 @@ if (isset($_POST['ubah'])) {
                 </div>
                 <div class="card-body p-4">
                     <form action="" method="post">
+                        <input type="hidden" name="csrf_token"
+                            value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        >
                         <input type="hidden" name="id_lokasi" value="<?= $lokasi['id_lokasi']; ?>">
                         <div class="mb-3">
                             <label for="nama_lokasi" class="form-label fw-semibold">Nama Lokasi <span class="text-danger">*</span></label>

@@ -2,19 +2,8 @@
 
 include_once '../../app/app.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $res = login($_POST);
-    if ($res === 1) {
-        header('Location: ' . get_landing_url('..'));
-        exit;
-    } elseif ($res === -1) {
-        echo "<script>alert('Maaf, Login Gagal, Password anda tidak sesuai!'); document.location='login.php';</script>";
-        exit;
-    } else {
-        echo "<script>alert('Maaf, Login Gagal, Username atau Role tidak sesuai!'); document.location='login.php';</script>";
-        exit;
-    }
-} else {
-    header('Location: login.php');
-    exit;
-}
+// File ini merupakan endpoint legacy/warisan.
+// Seluruh proses autentikasi resmi ditangani langsung secara aman di login.php (dilengkapi CSRF & prepared statement).
+// Mengalihkan secara aman ke login.php untuk mencegah potensi celah bypass login.
+header('Location: login.php');
+exit;

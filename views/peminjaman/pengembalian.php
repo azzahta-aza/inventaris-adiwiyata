@@ -1,39 +1,51 @@
 <?php
 
 include_once '../../app/app.php';
+
 check_role(['admin', 'petugas']);
 
-include_once '../../layout/header.php';
+$id_pinjam = (int)($_GET['id_pinjam'] ?? 0);
 
-$id_pinjam = (int)$_GET['id_pinjam'];
-
-$peminjaman_data = select_peminjaman("SELECT p.*, b.kode_barang, b.nama_barang, b.satuan 
-                                      FROM peminjaman p 
-                                      JOIN barang b ON p.id_barang = b.id_barang 
-                                      WHERE p.id_pinjam = $id_pinjam AND p.status = 'dipinjam'");
+$peminjaman_data = select_peminjaman(
+    "SELECT p.*, b.kode_barang, b.nama_barang, b.satuan
+    FROM peminjaman p
+    JOIN barang b ON p.id_barang = b.id_barang
+    WHERE p.id_pinjam = $id_pinjam AND p.status = 'dipinjam'"
+);
 
 if (empty($peminjaman_data)) {
-    echo "<script>
-            alert('Data peminjaman tidak ditemukan atau barang sudah dikembalikan.');
-            document.location.href = 'index.php';
-          </script>";
+    header('Location: index.php?return_status=already_returned');
     exit;
 }
 
 $pinjam = $peminjaman_data[0];
 
 if (isset($_POST['proses_kembali'])) {
-    if (kembalikan_peminjaman($_POST) > 0) {
-        echo "<script> 
-                alert('Pengembalian barang berhasil diproses dan stok barang telah dikembalikan.');
-                document.location.href = 'index.php';
-              </script>";
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    $session_token = $_SESSION['csrf_token'] ?? '';
+
+    if (
+        !is_string($csrf_token) ||
+        !is_string($session_token) ||
+        $session_token === '' ||
+        !hash_equals($session_token, $csrf_token)
+    ) {
+        http_response_code(403);
+        exit('Permintaan ditolak. Silakan muat ulang halaman dan coba lagi.');
+    }
+
+    $result = kembalikan_peminjaman($_POST);
+
+    if ($result === 1) {
+        header('Location: index.php?return_status=success');
+        exit;
     } else {
-        echo "<script> 
-                alert('Gagal memproses pengembalian barang.');
-              </script>";
+        header('Location: index.php?return_status=failed');
+        exit;
     }
 }
+
+include_once '../../layout/header.php';
 
 ?>
 
@@ -57,6 +69,11 @@ if (isset($_POST['proses_kembali'])) {
             </div>
 
             <form action="" method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <input type="hidden" name="id_pinjam" value="<?= $pinjam['id_pinjam']; ?>">
 
                 <div class="row">

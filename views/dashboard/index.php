@@ -1,8 +1,11 @@
 <?php
 include '../../app/app.php';
 
-// Enforce RBAC: accessible by Admin, Petugas, Kepala
-check_role(['admin', 'petugas', 'kepala']);
+// Dashboard boleh dilihat oleh guest.
+// Jika sudah login, tetap cek role.
+if (is_logged_in()) {
+    check_role(['admin', 'petugas', 'kepala']);
+}
 
 $title = 'Dashboard';
 
@@ -19,6 +22,7 @@ $user_role = strtolower($_SESSION['role'] ?? '');
 $is_admin = ($user_role === 'admin');
 $is_petugas = ($user_role === 'petugas');
 $is_kepala = ($user_role === 'kepala');
+$is_guest = !$is_admin && !$is_petugas && !$is_kepala;
 
 $role_label = 'Pengguna';
 $role_badge_class = 'bg-secondary';
@@ -38,9 +42,17 @@ if ($is_admin) {
     $role_icon = 'bi-person-check';
 }
 
-$link_transaksi = ($is_kepala) ? '../laporan/transaksi.php' : '../transaksi/index.php';
-$link_peminjaman = ($is_kepala) ? '../laporan/peminjaman.php' : '../peminjaman/index.php';
-$link_barang = ($is_admin) ? '../barang/index.php' : (($is_kepala) ? '../laporan/barang.php' : '#');
+$link_transaksi = $is_guest
+    ? '#'
+    : (($is_kepala) ? '../laporan/transaksi.php' : '../transaksi/index.php');
+
+$link_peminjaman = $is_guest
+    ? '#'
+    : (($is_kepala) ? '../laporan/peminjaman.php' : '../peminjaman/index.php');
+
+$link_barang = $is_guest
+    ? '#'
+    : (($is_admin) ? '../barang/index.php' : (($is_kepala) ? '../laporan/barang.php' : '#'));
 
 // Hitung persentase kondisi barang
 $tot_brg = (int)($summary['total_jenis_barang'] ?? 0);
@@ -206,228 +218,241 @@ include '../../layout/header.php';
     </div>
   </div>
 
-  <!-- 2. FOUR SUMMARY KPI CARDS (CLEAN & PROFESSIONAL) -->
-  <div class="row g-3 g-md-4 mb-4">
-
-    <!-- Card 1: Transaksi Keluar -->
-    <div class="col-12 col-sm-6 col-xl-3">
-      <div class="card stat-card shadow-sm border">
-        <div class="card-body p-3">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="text-muted small fw-semibold">Transaksi Keluar</span>
-            <div class="stat-icon-box">
-              <i class="bi bi-box-arrow-up-right"></i>
-            </div>
-          </div>
-          <div class="d-flex align-items-baseline gap-2 mt-2 mb-1">
-            <span class="fs-3 fw-bold text-dark"><?= number_format((int)($summary['count_keluar'] ?? 0)); ?></span>
-            <span class="text-muted small">transaksi</span>
-          </div>
-          <div class="small text-muted mb-3">
-            Total unit: <span class="fw-semibold text-dark"><?= number_format((int)($summary['qty_keluar'] ?? 0)); ?> unit</span>
-          </div>
-          <div class="pt-2 border-top d-flex align-items-center justify-content-between text-muted small">
-            <span class="text-muted extra-small">Bulan ini: <strong class="text-dark"><?= number_format((int)($summary['qty_keluar_bulan'] ?? 0)); ?> unit</strong></span>
-            <?php if (!$is_kepala) : ?>
-              <a href="../transaksi/index.php" class="text-decoration-none text-primary fw-semibold extra-small">Detail &rarr;</a>
-            <?php else : ?>
-              <a href="../laporan/transaksi.php" class="text-decoration-none text-primary fw-semibold extra-small">Laporan &rarr;</a>
-            <?php endif; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card 2: Transaksi Masuk -->
-    <div class="col-12 col-sm-6 col-xl-3">
-      <div class="card stat-card shadow-sm border">
-        <div class="card-body p-3">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="text-muted small fw-semibold">Transaksi Masuk</span>
-            <div class="stat-icon-box">
-              <i class="bi bi-box-arrow-in-down"></i>
-            </div>
-          </div>
-          <div class="d-flex align-items-baseline gap-2 mt-2 mb-1">
-            <span class="fs-3 fw-bold text-dark"><?= number_format((int)($summary['count_masuk'] ?? 0)); ?></span>
-            <span class="text-muted small">transaksi</span>
-          </div>
-          <div class="small text-muted mb-3">
-            Total unit: <span class="fw-semibold text-dark"><?= number_format((int)($summary['qty_masuk'] ?? 0)); ?> unit</span>
-          </div>
-          <div class="pt-2 border-top d-flex align-items-center justify-content-between text-muted small">
-            <span class="text-muted extra-small">Bulan ini: <strong class="text-dark"><?= number_format((int)($summary['qty_masuk_bulan'] ?? 0)); ?> unit</strong></span>
-            <?php if (!$is_kepala) : ?>
-              <a href="../transaksi/index.php" class="text-decoration-none text-primary fw-semibold extra-small">Detail &rarr;</a>
-            <?php else : ?>
-              <a href="../laporan/transaksi.php" class="text-decoration-none text-primary fw-semibold extra-small">Laporan &rarr;</a>
-            <?php endif; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card 3: Total Barang -->
-    <div class="col-12 col-sm-6 col-xl-3">
-      <div class="card stat-card shadow-sm border">
-        <div class="card-body p-3">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="text-muted small fw-semibold">Total Barang</span>
-            <div class="stat-icon-box">
-              <i class="bi bi-boxes"></i>
-            </div>
-          </div>
-          <div class="d-flex align-items-baseline gap-2 mt-2 mb-1">
-            <span class="fs-3 fw-bold text-dark"><?= number_format((int)($summary['total_jenis_barang'] ?? 0)); ?></span>
-            <span class="text-muted small">jenis barang</span>
-          </div>
-          <div class="small text-muted mb-3">
-            Total stok fisik: <span class="fw-semibold text-dark"><?= number_format((int)($summary['total_stok_barang'] ?? 0)); ?> unit</span>
-          </div>
-          <div class="pt-2 border-top d-flex align-items-center justify-content-between text-muted small">
-            <span class="text-muted extra-small">Layak: <strong class="text-dark"><?= number_format((int)($summary['kondisi_layak'] ?? 0)); ?> jenis</strong></span>
-            <?php if ($is_admin) : ?>
-              <a href="../barang/index.php" class="text-decoration-none text-primary fw-semibold extra-small">Master &rarr;</a>
-            <?php elseif ($is_kepala) : ?>
-              <a href="../laporan/barang.php" class="text-decoration-none text-primary fw-semibold extra-small">Laporan &rarr;</a>
-            <?php else : ?>
-              <span class="text-muted extra-small">Inventaris</span>
-            <?php endif; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card 4: Peminjaman Aktif -->
-    <div class="col-12 col-sm-6 col-xl-3">
-      <div class="card stat-card shadow-sm border">
-        <div class="card-body p-3">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="text-muted small fw-semibold">Peminjaman Aktif</span>
-            <div class="stat-icon-box">
-              <i class="bi bi-clock-history"></i>
-            </div>
-          </div>
-          <div class="d-flex align-items-baseline gap-2 mt-2 mb-1">
-            <span class="fs-3 fw-bold text-dark"><?= number_format((int)($summary['peminjaman_aktif'] ?? 0)); ?></span>
-            <span class="text-muted small">peminjaman</span>
-          </div>
-          <div class="small text-muted mb-3">
-            Sedang dipinjam: <span class="fw-semibold text-dark"><?= number_format((int)($summary['qty_dipinjam'] ?? 0)); ?> unit</span>
-          </div>
-          <div class="pt-2 border-top d-flex align-items-center justify-content-between text-muted small">
-            <span class="text-muted extra-small">Total riwayat: <strong class="text-dark"><?= number_format((int)($summary['total_pinjam'] ?? 0)); ?></strong></span>
-            <?php if (!$is_kepala) : ?>
-              <a href="../peminjaman/index.php" class="text-decoration-none text-primary fw-semibold extra-small">Kelola &rarr;</a>
-            <?php else : ?>
-              <a href="../laporan/peminjaman.php" class="text-decoration-none text-primary fw-semibold extra-small">Laporan &rarr;</a>
-            <?php endif; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- 3. SECTION 2: CHART & INVENTORY CONDITION / LOW STOCK -->
-  <div class="row g-3 g-md-4 mb-4">
-
-    <!-- Left: Trend Chart 7 Hari Terakhir -->
-    <div class="col-12 col-lg-8">
-      <div class="card shadow-sm border-0 rounded-3 h-100">
-        <div class="card-header card-table-header d-flex align-items-center justify-content-between py-3">
-          <div>
+<!-- 2. DASHBOARD SUMMARY -->
+<div class="row g-4 mb-4">
+  <!-- KIRI : KONDISI & STOK INVENTARIS (CARD BESAR) -->
+    <div class="col-12 col-lg-7">
+    <div class="card shadow-sm border-0 rounded-3 h-100">
+    <div class="card-header card-table-header py-3">
             <h6 class="fw-bold mb-0 text-dark">
-              <i class="bi bi-bar-chart-line-fill text-primary me-1"></i> Tren Transaksi 7 Hari Terakhir
+       Kondisi & Stok Inventaris
             </h6>
-            <span class="text-muted small">Perbandingan volume barang masuk vs barang keluar</span>
+            <span class="text-muted small">
+       Distribusi kelayakan & ketersediaan barang
+            </span>
+            </div>
+            <div class="card-body p-3">
+
+      <!-- Layak -->
+        <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1 small">
+             <span class="text-muted">Layak</span>
+             <span class="fw-semibold text-dark">
+             <?= $layak_cnt; ?> jenis (<?= $layak_pct; ?>%)
+             </span>
+             </div>
+
+        <div class="progress" style="height:7px;">
+             <div class="progress-bar bg-success"
+              style="width:<?= $layak_pct; ?>%">
+             </div>
+             </div>
+             </div>
+
+      <!-- Perbaikan -->
+        <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1 small">
+             <span class="text-muted">Perbaikan</span>
+             <span class="fw-semibold text-dark">
+             <?= $perbaikan_cnt; ?> jenis (<?= $perbaikan_pct; ?>%)
+             </span>
+             </div>
+         <div class="progress" style="height:7px;">
+             <div class="progress-bar bg-warning"
+              style="width:<?= $perbaikan_pct; ?>%">
+             </div>
+             </div>
+             </div>
+
+       <!-- Tidak Layak -->
+         <div class="mb-3">
+         <div class="d-flex justify-content-between align-items-center mb-1 small">
+             <span class="text-muted">Tidak Layak</span>
+             <span class="fw-semibold text-dark">
+             <?= $tidak_layak_cnt; ?> jenis (<?= $tidak_layak_pct; ?>%)
+             </span>
+             </div>
+         <div class="progress" style="height:7px;">
+             <div class="progress-bar bg-danger"
+              style="width:<?= $tidak_layak_pct; ?>%">
+             </div>
+             </div>
+             </div>
+
+         <hr class="my-3 text-muted opacity-25">
+         <div class="d-flex justify-content-between align-items-center mb-2">
+             <span class="fw-semibold text-dark small">
+                Peringatan Stok Rendah (≤5)
+             </span>
+             </div>
+
+         <?php if (!empty($low_stock)) : ?>
+          <div class="list-group list-group-flush border-0">
+
+         <?php foreach ($low_stock as $item) : ?>
+          <div class="list-group-item px-0 py-2 border-0 d-flex justify-content-between align-items-center">
+          <div class="me-2 text-truncate">
+          <span class="fw-semibold text-dark d-block text-truncate small">
+          <?= htmlspecialchars($item['nama_barang']); ?>
+          </span>
+
+          <span class="text-muted extra-small">
+         <?= htmlspecialchars($item['kode_barang']); ?>
+          </span>
           </div>
-          <span class="badge bg-light text-muted border">Real-time</span>
-        </div>
-        <div class="card-body p-3">
-          <div class="chart-wrapper">
-            <canvas id="txChart"></canvas>
+          <span class="badge <?= ((int)$item['stok'] === 0) ? 'bg-danger' : 'bg-warning text-dark'; ?> rounded-pill">
+         <?= (int)$item['stok']; ?> <?= htmlspecialchars($item['satuan']); ?>
+          </span>
           </div>
+
+         <?php endforeach; ?>
+         </div>
+         <?php else : ?>
+          <div class="alert alert-success py-2 px-3 mb-0 rounded-3 small">
+            Semua stok barang dalam kondisi aman.
+          </div>
+
+         <?php endif; ?>
+           </div>
         </div>
-      </div>
     </div>
 
-    <!-- Right: Kondisi Inventaris & Stok Kritis -->
-    <div class="col-12 col-lg-4">
-      <div class="card shadow-sm border-0 rounded-3 h-100">
-        <div class="card-header card-table-header py-3">
-          <h6 class="fw-bold mb-0 text-dark">
-            <i class="text-info me-1"></i> Kondisi & Stok Inventaris
-          </h6>
-          <span class="text-muted small">Distribusi kelayakan & ketersediaan</span>
-        </div>
-        <div class="card-body p-3">
+    <!-- KANAN : 4 CARD KPI (2x2) -->
+     <div class="col-12 col-lg-5">
+     <div class="row g-3">
 
-          <!-- Kondisi Barang Progress Bars -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1 small">
-              <span class="text-muted"> Layak</span>
-              <span class="fw-semibold text-dark"><?= $layak_cnt; ?> jenis (<?= $layak_pct; ?>%)</span>
-            </div>
-            <div class="progress" style="height: 7px;">
-              <div class="progress-bar bg-success" role="progressbar" style="width: <?= $layak_pct; ?>%" aria-valuenow="<?= $layak_pct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-          </div>
+    <!--  Card 1  -->
+     <div class="col-6">
+     <div class="card stat-card shadow-sm border h-100">
+     <div class="card-body p-3">
 
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1 small">
-              <span class="text-muted"> Perbaikan</span>
-              <span class="fw-semibold text-dark"><?= $perbaikan_cnt; ?> jenis (<?= $perbaikan_pct; ?>%)</span>
-            </div>
-            <div class="progress" style="height: 7px;">
-              <div class="progress-bar bg-warning" role="progressbar" style="width: <?= $perbaikan_pct; ?>%" aria-valuenow="<?= $perbaikan_pct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-          </div>
+    <div class="d-flex justify-content-between align-items-center">
+    <span class="text-muted small fw-semibold">
 
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1 small">
-              <span class="text-muted"> Tidak Layak</span>
-              <span class="fw-semibold text-dark"><?= $tidak_layak_cnt; ?> jenis (<?= $tidak_layak_pct; ?>%)</span>
-            </div>
-            <div class="progress" style="height: 7px;">
-              <div class="progress-bar bg-danger" role="progressbar" style="width: <?= $tidak_layak_pct; ?>%" aria-valuenow="<?= $tidak_layak_pct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-          </div>
+    Transaksi Keluar
+    </span>
+    <div class="stat-icon-box">
+    <i class="bi bi-box-arrow-up-right"></i>
+    </div>
+    </div>
 
-          <hr class="my-3 text-muted opacity-25">
+    <div class="mt-3 mb-1">
+    <span class="fs-3 fw-bold text-dark">
+    <?= number_format((int)($summary['count_keluar'] ?? 0)); ?>
+    </span>
+    </div>
+    <span class="text-muted small">transaksi</span>
+    <hr>
+    <small class="text-muted">Total unit</small><br>
+    <strong>
+     <?= number_format((int)($summary['qty_keluar'] ?? 0)); ?> unit
+    </strong>
+    </div>
+    </div>
+    </div>
 
-          <!-- Low Stock Alert -->
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <span class="fw-semibold text-dark small">Peringatan Stok Rendah (&le; 5)</span>
-          </div>
+   <!--  Card 2 -->
+            <div class="col-6">
 
-          <?php if (!empty($low_stock)) : ?>
-            <div class="list-group list-group-flush border-0">
-              <?php foreach ($low_stock as $item) : ?>
-                <div class="list-group-item px-0 py-2 border-0 d-flex align-items-center justify-content-between">
-                  <div class="me-2 text-truncate">
-                    <span class="fw-semibold text-dark d-block text-truncate small"><?= htmlspecialchars($item['nama_barang']); ?></span>
-                    <span class="text-muted extra-small"><?= htmlspecialchars($item['kode_barang']); ?></span>
-                  </div>
-                  <span class="badge <?= ((int)$item['stok'] === 0) ? 'bg-danger' : 'bg-warning text-dark'; ?> rounded-pill">
-                    <?= (int)$item['stok']; ?> <?= htmlspecialchars($item['satuan']); ?>
-                  </span>
+                <div class="card stat-card shadow-sm border h-100">
+
+                    <div class="card-body p-3">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small fw-semibold">
+                                Transaksi Masuk
+                            </span>
+
+                            <div class="stat-icon-box">
+                                <i class="bi bi-box-arrow-in-down"></i>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 mb-1">
+                            <span class="fs-3 fw-bold text-dark">
+                                <?= number_format((int)($summary['count_masuk'] ?? 0)); ?>
+                            </span>
+                        </div>
+
+                        <span class="text-muted small">transaksi</span>
+
+                        <hr>
+
+                        <small class="text-muted">Total unit</small><br>
+
+                        <strong>
+                            <?= number_format((int)($summary['qty_masuk'] ?? 0)); ?> unit
+                        </strong>
+
+                    </div>
+
                 </div>
-              <?php endforeach; ?>
-            </div>
-          <?php else : ?>
-            <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-0 small rounded-3">
-              <span>Semua stok barang dalam kondisi aman.</span>
-            </div>
-          <?php endif; ?>
 
+            </div>
+
+            <!--  Card 3  -->
+            <div class="col-6">
+
+                <div class="card stat-card shadow-sm border h-100">
+
+                    <div class="card-body p-3">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small fw-semibold">
+                                Total Barang
+                            </span>
+
+                            <div class="stat-icon-box">
+                                <i class="bi bi-boxes"></i>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 mb-1">
+                            <span class="fs-3 fw-bold text-dark">
+                                <?= number_format((int)($summary['total_jenis_barang'] ?? 0)); ?>
+                            </span>
+                        </div>
+                        <span class="text-muted small">jenis barang</span>
+                        <hr>
+                        <small class="text-muted">Total stok</small><br>
+                        <strong>
+                            <?= number_format((int)($summary['total_stok_barang'] ?? 0)); ?> unit
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <!--  Card 4  -->
+            <div class="col-6">
+                <div class="card stat-card shadow-sm border h-100">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small fw-semibold">
+                                Peminjaman Aktif
+                            </span>
+                            <div class="stat-icon-box">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3 mb-1">
+                            <span class="fs-3 fw-bold text-dark">
+                                <?= number_format((int)($summary['peminjaman_aktif'] ?? 0)); ?>
+                            </span>
+                        </div>
+                        <span class="text-muted small">peminjaman</span>
+                        <hr>
+                        <small class="text-muted">Sedang dipinjam</small><br>
+                        <strong>
+                            <?= number_format((int)($summary['qty_dipinjam'] ?? 0)); ?> unit
+                        </strong>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
+</div>
 
-  </div>
-
-  <!-- 4. SECTION 3: RECENT TRANSACTIONS (MASUK & KELUAR) -->
+  <!-- 3. RECENT TRANSACTIONS (MASUK & KELUAR) -->
   <div class="row g-3 g-md-4 mb-4">
 
     <!-- Transaksi Masuk Terkini -->
@@ -443,9 +468,11 @@ include '../../layout/header.php';
               <span class="text-muted small">5 aktivitas barang masuk terbaru</span>
             </div>
           </div>
-          <a href="<?= $link_transaksi; ?>" class="btn btn-outline-success btn-sm rounded-pill px-3 py-1">
-            Lihat Semua <i class="bi bi-arrow-right"></i>
-          </a>
+          <?php if (!$is_guest) : ?>
+            <a href="<?= $link_transaksi; ?>" class="btn btn-outline-success btn-sm rounded-pill px-3 py-1">
+              Lihat Semua <i class="bi bi-arrow-right"></i>
+            </a>
+          <?php endif; ?>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -564,7 +591,7 @@ include '../../layout/header.php';
 
   </div>
 
-  <!-- 5. SECTION 4: RECENT LOANS (PEMINJAMAN TERKINI) -->
+  <!-- 4. RECENT LOANS (PEMINJAMAN TERKINI) -->
   <div class="row g-3 g-md-4 mb-4">
     <div class="col-12">
       <div class="card shadow-sm border-0 rounded-3">
@@ -598,7 +625,7 @@ include '../../layout/header.php';
               <tbody>
                 <?php if (!empty($latest_pinjam)) : ?>
                   <?php foreach ($latest_pinjam as $pinjam) : ?>
-                    <?php 
+                    <?php
                       $is_dipinjam = strtolower($pinjam['status'] ?? '') === 'dipinjam';
                     ?>
                     <tr>

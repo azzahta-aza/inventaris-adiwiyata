@@ -1,28 +1,71 @@
 <?php
 
 include_once '../../app/app.php';
-check_role('admin');
 
-include_once '../../layout/header.php';
+check_role(['admin', 'petugas']);
 
-// Ambil list semua kategori dan lokasi untuk opsi dropdown
-$data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori ASC");
-$data_lokasi   = select_lokasi("SELECT * FROM lokasi ORDER BY nama_lokasi ASC");
+// Ambil daftar kategori dan lokasi untuk dropdown
+$data_kategori = select_kategori(
+    "SELECT * FROM kategori ORDER BY nama_kategori ASC"
+);
 
-// Cek apakah tombol tambah ditekan
-if (isset($_POST['tambah'])) {
-    if (create_barang($_POST) > 0) {
-        echo "<script> 
-                alert('Data Barang Berhasil Ditambahkan');
-                document.location.href = 'index.php';
-              </script>";
+$data_lokasi = select_lokasi(
+    "SELECT * FROM lokasi ORDER BY nama_lokasi ASC"
+);
+
+// Membuat kode barang otomatis
+$data_kode = select_barang(
+    "SELECT kode_barang FROM barang ORDER BY id_barang DESC LIMIT 1"
+);
+
+if (!empty($data_kode)) {
+    $kode_terakhir = $data_kode[0]['kode_barang'];
+
+    if (preg_match('/^BRG-(\d+)$/', $kode_terakhir, $cocok)) {
+        $nomor_berikutnya = (int) $cocok[1] + 1;
     } else {
-        echo "<script> 
-                alert('Data Barang Gagal Ditambahkan');
-                document.location.href = 'tambah.php';
-              </script>";
+        $nomor_berikutnya = count(
+            select_barang("SELECT id_barang FROM barang")
+        ) + 1;
     }
+} else {
+    $nomor_berikutnya = 1;
 }
+
+$kode_barang = 'BRG-' . str_pad(
+    $nomor_berikutnya,
+    3,
+    '0',
+    STR_PAD_LEFT
+);
+
+// Proses tambah barang
+if (isset($_POST['tambah'])) {
+    $token_sesi = $_SESSION['csrf_token'] ?? '';
+    $token_form = $_POST['csrf_token'] ?? '';
+
+    if (
+        !is_string($token_sesi) ||
+        !is_string($token_form) ||
+        $token_sesi === '' ||
+        !hash_equals($token_sesi, $token_form)
+    ) {
+        http_response_code(403);
+        exit('Permintaan tidak valid. Silakan muat ulang halaman.');
+    }
+
+    $hasil = create_barang($_POST);
+
+    if ($hasil > 0) {
+        header('Location: index.php?status=success');
+        exit;
+    }
+
+    header('Location: index.php?status=failed');
+    exit;
+}
+
+include '../../layout/header.php';
 
 ?>
 
@@ -33,10 +76,24 @@ if (isset($_POST['tambah'])) {
         </div>
         <div class="card-body">
             <form action="" method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <div class="row">
+
+                    <!-- KODE BARANG OTOMATIS -->
                     <div class="col-md-6 mb-3">
                         <label for="kode_barang" class="form-label fw-bold">Kode Barang</label>
-                        <input type="text" class="form-control" id="kode_barang" name="kode_barang" placeholder="Contoh: BRG-001" required>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="kode_barang"
+                            name="kode_barang"
+                            value="<?= $kode_barang; ?>"
+                            readonly
+                        >
                     </div>
 
                     <div class="col-md-6 mb-3">
@@ -77,13 +134,20 @@ if (isset($_POST['tambah'])) {
 
                 <div class="row">
                     <div class="col-md-4 mb-3">
-                        <label for="stok" class="form-label fw-bold">Stok Awal</label>
-                        <input type="number" class="form-control" id="stok" name="stok" min="0" placeholder="0" required>
+                        <label for="stok" class="form-label fw-bold">Stok</label>
+                        <input type="number" class="form-control" id="stok" name="stok" min="0" required>
                     </div>
 
+                    <!-- SATUAN SELECT -->
                     <div class="col-md-4 mb-3">
                         <label for="satuan" class="form-label fw-bold">Satuan</label>
-                        <input type="text" class="form-control" id="satuan" name="satuan" placeholder="Contoh: Unit, Pcs, Box, Set" required>
+                        <select class="form-select" id="satuan" name="satuan" required>
+                            <option value="">-- Pilih Satuan --</option>
+                            <option value="Pcs">Pcs</option>
+                            <option value="Box">Box</option>
+                            <option value="Set">Set</option>
+                            <option value="Unit">Unit</option>
+                        </select>
                     </div>
 
                     <div class="col-md-4 mb-3">

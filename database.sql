@@ -69,9 +69,17 @@ CREATE TABLE IF NOT EXISTS `transaksi` (
   CONSTRAINT `fk_transaksi_user` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Sample Data Initial Users (Password: admin123)
+-- ===================================================
+-- Sample Data Initial Users (Password Default: admin123)
+-- PERINGATAN KEAMANAN DEPLOYMENT:
+-- Password berikut menggunakan hash bcrypt default untuk lingkungan pengujian/UKK.
+-- SEBELUM/SETELAH DEPLOY KE SERVER HOSTING PUBLIK:
+-- Segera ubah kata sandi akun 'admin', 'petugas', dan 'kepala'
+-- melalui menu Manajemen Pengguna atau hash baru via password_hash().
+-- ===================================================
 INSERT INTO `users` (`id_user`, `nama`, `username`, `password`, `role`) VALUES
 (1, 'Administrator', 'admin', '$2y$10$JAmK6DtgPIgXx5EH0BIC7OeNvr.0diN5w0aea0y9GmdihRHWfL1ra', 'Admin'),
 (2, 'Petugas Gudang', 'petugas', '$2y$10$JAmK6DtgPIgXx5EH0BIC7OeNvr.0diN5w0aea0y9GmdihRHWfL1ra', 'Petugas'),
 (3, 'Kepala Bagian', 'kepala', '$2y$10$JAmK6DtgPIgXx5EH0BIC7OeNvr.0diN5w0aea0y9GmdihRHWfL1ra', 'Kepala')
 ON DUPLICATE KEY UPDATE `id_user`=`id_user`;
+

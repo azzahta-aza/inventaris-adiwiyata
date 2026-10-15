@@ -1,20 +1,42 @@
 <?php
 
 include_once '../../app/app.php';
+include '../../layout/pagination.php';
 check_role(['admin', 'petugas']);
+
+$transaction_status = $_GET['status'] ?? null;
+$delete_status = $_GET['delete_status'] ?? null;
+
+$transaction_message = null;
+$transaction_message_type = 'success';
+
+if ($transaction_status === 'success') {
+    $transaction_message = 'Transaksi berhasil dicatat dan stok barang berhasil diperbarui.';
+} elseif ($delete_status === 'success') {
+    $transaction_message = 'Data transaksi berhasil dihapus.';
+} elseif ($delete_status === 'failed') {
+    $transaction_message = 'Data transaksi gagal dihapus.';
+    $transaction_message_type = 'warning';
+}
 
 include_once '../../layout/header.php';
 
 // Ambil data transaksi dengan JOIN ke barang dan users
-$data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas 
-                                    FROM transaksi t 
-                                    LEFT JOIN barang b ON t.id_barang = b.id_barang 
-                                    LEFT JOIN users u ON t.id_user = u.id_user 
+$data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas
+                                    FROM transaksi t
+                                    LEFT JOIN barang b ON t.id_barang = b.id_barang
+                                    LEFT JOIN users u ON t.id_user = u.id_user
                                     ORDER BY t.id_transaksi DESC");
 
 ?>
 
 <div class="container-fluid py-2">
+     <?php if ($transaction_message !== null) : ?>
+        <div class="alert alert-<?= htmlspecialchars($transaction_message_type, ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">
+            <?= htmlspecialchars($transaction_message, ENT_QUOTES, 'UTF-8'); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+    <?php endif; ?>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Riwayat Transaksi Barang</h1>
@@ -24,12 +46,11 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
             <i class="bi bi-plus-circle me-1"></i> Catat Transaksi
         </a>
     </div>
-
-    <div class="card shadow-sm">
-        <div class="card-body">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover align-middle">
-                    <thead class="table-dark text-center">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-header-green text-center">
                         <tr>
                             <th width="5%">No</th>
                             <th width="12%">Tanggal</th>
@@ -41,7 +62,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                             <th width="8%">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="text-center">
                         <?php if (empty($data_transaksi)) : ?>
                             <tr>
                                 <td colspan="8" class="text-center text-muted py-4">Belum ada data transaksi barang.</td>
@@ -69,9 +90,16 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                                     <td><?= htmlspecialchars($tr['keterangan']); ?></td>
                                     <td><?= htmlspecialchars($tr['nama_petugas'] ?? 'Petugas'); ?></td>
                                     <td class="text-center text-nowrap">
-                                        <a href="hapus.php?id_transaksi=<?= $tr['id_transaksi']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus riwayat transaksi ini? Mutasi stok akan dibatalkan.');" title="Hapus Transaksi">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                                        <form action="hapus.php" method="POST" class="d-inline"
+                                            onsubmit="return confirm('Yakin ingin menghapus riwayat transaksi ini? Mutasi stok akan dibatalkan.');">
+                                            <input type="hidden" name="id_transaksi"
+                                                value="<?= (int) $tr['id_transaksi']; ?>">
+                                            <input type="hidden" name="csrf_token"
+                                                value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Hapus Transaksi">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

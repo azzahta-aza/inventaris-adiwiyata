@@ -3,40 +3,72 @@
 include_once '../../app/app.php';
 check_role(['admin', 'petugas']);
 
-include_once '../../layout/header.php';
-
 // Ambil data barang yang stoknya > 0 dan kondisinya layak
 $data_barang = select_barang("SELECT * FROM barang WHERE stok > 0 AND kondisi = 'layak' ORDER BY nama_barang ASC");
 $data_users  = has_role('admin') ? select_users("SELECT * FROM users ORDER BY nama ASC") : [];
 
 if (isset($_POST['pinjam'])) {
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    $session_token = $_SESSION['csrf_token'] ?? '';
+
+    if (
+        !is_string($csrf_token) ||
+        !is_string($session_token) ||
+        $session_token === '' ||
+        !hash_equals($session_token, $csrf_token)
+    ) {
+        http_response_code(403);
+        exit('Permintaan ditolak. Silakan muat ulang halaman dan coba lagi.');
+    }
+
     $result = create_peminjaman($_POST);
+
     if ($result > 0) {
-        echo "<script> 
-                alert('Peminjaman barang berhasil dicatat dan stok barang telah dikurangi');
-                document.location.href = 'index.php';
-              </script>";
+        header('Location: index.php?status=success');
+        exit;
     } elseif ($result === -1) {
-        echo "<script> 
-                alert('Gagal! Jumlah barang yang dipinjam melebihi stok yang tersedia.');
-              </script>";
+        header('Location: tambah.php?status=stok_kurang');
+        exit;
     } else {
-        echo "<script> 
-                alert('Peminjaman barang gagal dicatat.');
-                document.location.href = 'tambah.php';
-              </script>";
+        header('Location: tambah.php?status=failed');
+        exit;
     }
 }
+
+include_once '../../layout/header.php';
 
 ?>
 
 <div class="container-fluid py-2">
+    <?php
+    $tambah_status = $_GET['status'] ?? null;
+    $tambah_message = null;
+    $tambah_message_type = 'danger';
+
+    if ($tambah_status === 'stok_kurang') {
+        $tambah_message = 'Jumlah barang yang dipinjam melebihi stok yang tersedia.';
+    } elseif ($tambah_status === 'failed') {
+        $tambah_message = 'Peminjaman barang gagal dicatat.';
+    }
+    ?>
+
+    <?php if ($tambah_message !== null) : ?>
+        <div class="alert alert-<?= htmlspecialchars($tambah_message_type, ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">
+            <?= htmlspecialchars($tambah_message, ENT_QUOTES, 'UTF-8'); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+    <?php endif; ?>
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
             <h4 class="card-title mb-0"><i class="bi bi-box-arrow-right me-2"></i>Form Tambah Peminjaman Barang</h4>
         </div>
         <div class="card-body">
             <form action="" method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <div class="row">
                     <!-- Dropdown Pilih Barang -->
                     <div class="col-md-6 mb-3">
@@ -69,18 +101,20 @@ if (isset($_POST['pinjam'])) {
                     <!-- Input Jumlah Pinjam -->
                     <div class="col-md-4 mb-3">
                         <label for="jumlah" class="form-label fw-bold">Jumlah Pinjam</label>
-                        <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" placeholder="1" required>
+                        <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" required>
                     </div>
 
                     <!-- Petugas Pencatat -->
                     <div class="col-md-4 mb-3">
                         <label for="id_user" class="form-label fw-bold">Petugas Pencatat</label>
-                        <?php if (has_role('admin') && !empty($data_users)) : ?>
+                            <?php if (has_role('admin') && !empty($data_users)) : ?>
                             <select class="form-select" id="id_user" name="id_user">
                                 <?php foreach ($data_users as $user) : ?>
-                                    <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
-                                        <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
-                                    </option>
+                                    <?php if (in_array(strtolower($user['role']), ['admin', 'petugas'])) : ?>
+                                        <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
+                                            <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
+                                        </option>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </select>
                         <?php else : ?>

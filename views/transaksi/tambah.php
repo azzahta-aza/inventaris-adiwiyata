@@ -3,29 +3,37 @@
 include_once '../../app/app.php';
 check_role(['admin', 'petugas']);
 
-include_once '../../layout/header.php';
-
 $data_barang = select_barang("SELECT * FROM barang ORDER BY nama_barang ASC");
 $data_users  = has_role('admin') ? select_users("SELECT * FROM users ORDER BY nama ASC") : [];
+$transaction_message = null;
+$transaction_message_type = 'danger';
 
 if (isset($_POST['simpan_transaksi'])) {
-    $result = create_transaksi($_POST);
-    if ($result > 0) {
-        echo "<script> 
-                alert('Transaksi barang berhasil dicatat dan stok berhasil diperbarui.');
-                document.location.href = 'index.php';
-              </script>";
-    } elseif ($result === -1) {
-        echo "<script> 
-                alert('Gagal! Stok barang tidak mencukupi untuk transaksi barang keluar.');
-              </script>";
-    } else {
-        echo "<script> 
-                alert('Transaksi barang gagal dicatat.');
-                document.location.href = 'tambah.php';
-              </script>";
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    $session_token = $_SESSION['csrf_token'] ?? '';
+
+    if (
+        !is_string($csrf_token) ||
+        !is_string($session_token) ||
+        $session_token === '' ||
+        !hash_equals($session_token, $csrf_token)
+    ) {
+        http_response_code(403);
+        exit('Permintaan tidak valid. Silakan muat ulang halaman dan coba lagi.');
     }
+
+    $result = create_transaksi($_POST);
+
+    if ($result === 1) {
+        header('Location: index.php?status=success');
+        exit;
+    }
+
+    $transaction_message = 'Transaksi gagal dicatat. Periksa kembali data yang dimasukkan.';
+    $transaction_message_type = 'danger';
 }
+
+include_once '../../layout/header.php';
 
 ?>
 
@@ -35,7 +43,22 @@ if (isset($_POST['simpan_transaksi'])) {
             <h4 class="card-title mb-0"><i class="bi bi-journal-plus me-2"></i>Form Transaksi Barang (Masuk / Keluar)</h4>
         </div>
         <div class="card-body">
+            <?php if ($transaction_message !== null) : ?>
+                <div class="alert alert-<?= htmlspecialchars($transaction_message_type); ?>" role="alert">
+                    <?= htmlspecialchars($transaction_message); ?>
+                </div>
+            <?php endif; ?>
+            <?php if (empty($data_barang)) : ?>
+                <div class="alert alert-danger" role="alert">
+                    Belum ada barang yang dapat ditransaksikan. Tambahkan data barang terlebih dahulu.
+                </div>
+            <?php endif; ?>
             <form action="" method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <div class="row">
                     <!-- Dropdown Pilih Barang -->
                     <div class="col-md-6 mb-3">
@@ -68,17 +91,19 @@ if (isset($_POST['simpan_transaksi'])) {
 
                     <div class="col-md-4 mb-3">
                         <label for="jumlah" class="form-label fw-bold">Jumlah</label>
-                        <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" placeholder="1" required>
+                        <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" required>
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label for="id_user" class="form-label fw-bold">Petugas Pencatat</label>
-                        <?php if (has_role('admin') && !empty($data_users)) : ?>
+                            <?php if (has_role('admin') && !empty($data_users)) : ?>
                             <select class="form-select" id="id_user" name="id_user">
                                 <?php foreach ($data_users as $user) : ?>
-                                    <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
-                                        <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
-                                    </option>
+                                    <?php if (in_array(strtolower($user['role']), ['admin', 'petugas'])) : ?>
+                                        <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
+                                            <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
+                                        </option>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </select>
                         <?php else : ?>
@@ -86,17 +111,16 @@ if (isset($_POST['simpan_transaksi'])) {
                             <input type="hidden" name="id_user" value="<?= (int)($_SESSION['id_user'] ?? 1); ?>">
                         <?php endif; ?>
                     </div>
-                </div>
 
                 <div class="mb-3">
                     <label for="keterangan" class="form-label fw-bold">Keterangan / Alasan Mutasi</label>
-                    <textarea class="form-control" id="keterangan" name="keterangan" rows="3" placeholder="Contoh: Pengadaan barang tahun 2026 / Pemakaian ATK divisi logistik..."></textarea>
+                    <textarea class="form-control" id="keterangan" name="keterangan" rows="3" maxlength="100" placeholder="Contoh: Pengadaan barang tahun 2026 / Pemakaian ATK divisi logistik..."></textarea>
                 </div>
 
                 <hr>
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <a href="index.php" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i> Kembali</a>
-                    <button type="submit" name="simpan_transaksi" class="btn btn-primary"><i class="bi bi-save me-1"></i> Catat Transaksi</button>
+                    <button type="submit" name="simpan_transaksi" class="btn btn-primary" <?= empty($data_barang) ? 'disabled' : ''; ?>><i class="bi bi-save me-1"></i> Catat Transaksi</button>
                 </div>
             </form>
         </div>

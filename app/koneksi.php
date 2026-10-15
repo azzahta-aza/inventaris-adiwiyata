@@ -31,5 +31,7 @@ $db_name = getenv('DB_NAME') ?: 'inventory';
 $db = mysqli_connect($db_host, $db_user, $db_pass, $db_name, $db_port);
 
 if (!$db) {
-    die("Koneksi database gagal: " . mysqli_connect_error());
+    error_log('[UKKinventory] DB connection failed: ' . mysqli_connect_error());
+    http_response_code(503);
+    die("Sistem sedang dalam perbaikan. Silakan coba beberapa saat lagi.");
 }

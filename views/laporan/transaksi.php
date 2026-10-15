@@ -24,17 +24,14 @@ if ($jenis !== '') {
 
 $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
-$data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas 
-                                    FROM transaksi t 
-                                    LEFT JOIN barang b ON t.id_barang = b.id_barang 
-                                    LEFT JOIN users u ON t.id_user = u.id_user 
-                                    $where_sql 
+$data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas
+                                    FROM transaksi t
+                                    LEFT JOIN barang b ON t.id_barang = b.id_barang
+                                    LEFT JOIN users u ON t.id_user = u.id_user
+                                    $where_sql
                                     ORDER BY t.tanggal DESC");
 
 ?>
-
-<!-- html2pdf.js CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -43,9 +40,9 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
             <p class="text-muted small mb-0">Rekapitulasi mutasi barang masuk (pembelian/restock) dan barang keluar</p>
         </div>
         <div>
-            <button type="button" onclick="exportLaporanPDF()" class="btn btn-danger shadow-sm">
+            <a href="cetakpdf.php?tipe=transaksi&tgl_mulai=<?= urlencode($tgl_mulai); ?>&tgl_sampai=<?= urlencode($tgl_sampai); ?>&jenis=<?= urlencode($jenis); ?>" target="_blank" class="btn btn-danger shadow-sm">
                 <i class="bi bi-file-earmark-pdf-fill me-1"></i> Export to PDF
-            </button>
+            </a>
         </div>
     </div>
 
@@ -78,18 +75,11 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
     </div>
 
     <!-- Exportable Area -->
-    <div class="card shadow-sm" id="area-laporan">
+    <div class="card shadow-sm">
         <div class="card-body p-4">
-            <div class="text-center mb-4 d-none" id="kop-laporan">
-                <h3 class="fw-bold mb-1">LAPORAN MUTASI TRANSAKSI BARANG</h3>
-                <p class="text-muted mb-0">Sistem Manajemen & Pengelolaan Sarana Prasarana</p>
-                <small>Tanggal Export: <?= date('d F Y, H:i'); ?> WIB</small>
-                <hr style="border-top: 2px solid #000; margin-top: 10px;">
-            </div>
-
             <div class="table-responsive">
                 <table class="table table-bordered table-striped align-middle">
-                    <thead class="table-dark text-center">
+                    <thead class="table-white text-center">
                         <tr>
                             <th width="5%">No</th>
                             <th>Tanggal</th>
@@ -100,7 +90,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                             <th>Petugas</th>
                         </tr>
                     </thead>
-                    <tbody class="text-center">
+                    <tbody>
                         <?php if (empty($data_transaksi)) : ?>
                             <tr>
                                 <td colspan="7" class="text-muted py-4">Tidak ada data transaksi yang cocok.</td>
@@ -108,17 +98,17 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                         <?php else : ?>
                             <?php $no = 1; ?>
                             <?php foreach ($data_transaksi as $t) : ?>
-                                <tr>
+                                <tr class="text-center">
                                     <td><?= $no++; ?></td>
                                     <td><?= date('d/m/Y', strtotime($t['tanggal'])); ?></td>
-                                    <td class="text-start">[<?= htmlspecialchars($t['kode_barang']); ?>] <?= htmlspecialchars($t['nama_barang']); ?></td>
+                                    <td>[<?= htmlspecialchars($t['kode_barang']); ?>] <?= htmlspecialchars($t['nama_barang']); ?></td>
                                     <td>
                                         <?= (strtolower($t['jenis_transaksi']) === 'masuk') ? '<span class="badge bg-success">Masuk</span>' : '<span class="badge bg-danger">Keluar</span>'; ?>
                                     </td>
                                     <td class="fw-bold">
                                         <?= (strtolower($t['jenis_transaksi']) === 'masuk' ? '+' : '-') . $t['jumlah']; ?> <?= htmlspecialchars($t['satuan']); ?>
                                     </td>
-                                    <td class="text-start"><?= htmlspecialchars($t['keterangan']); ?></td>
+                                    <td><?= htmlspecialchars($t['keterangan']); ?></td>
                                     <td><?= htmlspecialchars($t['nama_petugas'] ?? '-'); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -126,40 +116,12 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                     </tbody>
                 </table>
             </div>
-
-            <!-- Tanda Tangan Khusus PDF -->
-            <div class="row mt-4 d-none" id="ttd-laporan">
-                <div class="col-7"></div>
-                <div class="col-5 text-center">
-                    <p class="mb-4">Mengetahui,<br><strong>Kepala Bagian Sarana & Prasarana</strong></p>
-                    <p class="mt-4 fw-bold text-decoration-underline">( .................................................. )</p>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
 <script>
-function exportLaporanPDF() {
-    const kop = document.getElementById('kop-laporan');
-    const ttd = document.getElementById('ttd-laporan');
-    kop.classList.remove('d-none');
-    ttd.classList.remove('d-none');
-
-    const element = document.getElementById('area-laporan');
-    const opt = {
-        margin:       10,
-        filename:     'Laporan_Transaksi_<?= date("Ymd_His"); ?>.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-    };
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        kop.classList.add('d-none');
-        ttd.classList.add('d-none');
-    });
-}
+// PDF handled by cetakpdf.php
 </script>
 
 <?php include_once '../../layout/footer.php'; ?>

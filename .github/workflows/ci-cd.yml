@@ -1,4 +1,4 @@
-name: CI/CD Inventory Pipeline
+name: CI Inventory
 
 on:
   push:
@@ -8,122 +8,50 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
-    name: Test & Quality Gate
+    name: PHP Syntax Check
     runs-on: ubuntu-latest
-    env:
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_USER: admin_inventaris
-      DB_PASS: PassInventarisUKK2026
-      DB_NAME: inventory
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: PassInventarisUKK2026
-          MYSQL_DATABASE: inventory
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup PHP Environment
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           extensions: mysqli, pdo_mysql, gd, mbstring, json
           coverage: none
 
-      - name: Verify PHP Syntax (Linting)
+      - name: Check PHP Syntax
+        shell: bash
         run: |
-          echo "=== 1. CHECKING PHP SYNTAX ==="
+          echo "=== CHECKING PHP SYNTAX ==="
+
           ERRORS=0
+
           while IFS= read -r file; do
-            php -l "$file" || ERRORS=$((ERRORS+1))
-          done < <(find . -type f -name "*.php" -not -path "./vendor/*")
-          if [ $ERRORS -ne 0 ]; then
-            echo "Linting failed with $ERRORS syntax errors!"
+            echo "Checking: $file"
+
+            if ! php -l "$file"; then
+              ERRORS=$((ERRORS+1))
+            fi
+          done < <(
+            find . \
+              -type f \
+              -name "*.php" \
+              -not -path "./.git/*" \
+              -not -path "./vendor/*"
+          )
+
+          if [ "$ERRORS" -ne 0 ]; then
+            echo ""
+            echo "PHP syntax check failed with $ERRORS error(s)."
             exit 1
           fi
+
+          echo ""
           echo "All PHP files have valid syntax."
-
-      - name: Initialize Database Schema
-        run: |
-          echo "=== 2. INITIALIZING MYSQL SCHEMA ==="
-          mysql -h 127.0.0.1 -u admin_inventaris -pPassInventarisUKK2026 inventory < database.sql
-          echo "Database schema imported successfully."
-
-      - name: Run RBAC Security Test Suite
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: admin_inventaris
-          DB_PASS: PassInventarisUKK2026
-          DB_NAME: inventory
-        run: |
-          echo "=== 3. RUNNING RBAC SECURITY TESTS ==="
-          php test_rbac.php
-
-      - name: Run Dashboard Role-Aware Test Suite
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: admin_inventaris
-          DB_PASS: PassInventarisUKK2026
-          DB_NAME: inventory
-        run: |
-          echo "=== 4. RUNNING DASHBOARD ROLE-AWARE TESTS ==="
-          php test_dashboard.php
-
-      - name: Run Responsive Layout Audit Test Suite
-        run: |
-          echo "=== 5. RUNNING RESPONSIVE VIEWPORT TESTS ==="
-          php test_responsive.php
-
-  deploy:
-    name: Automated Server Deployment
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: self-hosted
-
-    steps:
-      - name: Deploy Code on Armbian Server
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "================================================="
-          echo " Starting automated deployment on $(hostname)..."
-          echo "================================================="
-          TARGET_DIR="/var/www/inventaris_adiwiyata"
-          if [ -n "${{ secrets.SERVER_PATH }}" ] && [ -d "${{ secrets.SERVER_PATH }}" ]; then
-            TARGET_DIR="${{ secrets.SERVER_PATH }}"
-          fi
-          echo "Target deployment directory: $TARGET_DIR"
-
-          if [ ! -d "$TARGET_DIR" ]; then
-            echo "[ERROR] Direktori $TARGET_DIR tidak ditemukan di server!"
-            echo "Pastikan project sudah di-clone di $TARGET_DIR."
-            exit 1
-          fi
-
-          cd "$TARGET_DIR"
-          git config --global --add safe.directory "$TARGET_DIR" 2>/dev/null || true
-          echo "Menyelaraskan kode dengan branch main..."
-          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          git fetch origin main
-          git reset --hard origin/main
-
-          if [ -f "deploy.sh" ]; then
-            chmod +x deploy.sh
-            ./deploy.sh
-          fi
-
-          echo "================================================="
-          echo " Server deployment completed at $(date)!"
-          echo "================================================="

@@ -3,26 +3,35 @@
 include_once '../../app/app.php';
 check_role('admin');
 
-include_once '../../layout/header.php';
-
 if (isset($_POST['tambah'])) {
+    $token_sesi = $_SESSION['csrf_token'] ?? '';
+    $token_form = $_POST['csrf_token'] ?? '';
+
+    if (
+        !is_string($token_sesi) ||
+        !is_string($token_form) ||
+        $token_sesi === '' ||
+        !hash_equals($token_sesi, $token_form)
+    ) {
+        http_response_code(403);
+        exit('Permintaan tidak valid. Silakan muat ulang halaman.');
+    }
+
     $result = create_user($_POST);
+
     if ($result > 0) {
-        echo "<script> 
-                alert('Pengguna baru berhasil ditambahkan.');
-                document.location.href = 'index.php';
-              </script>";
+        header('Location: index.php?status=success');
+        exit;
     } elseif ($result === -1) {
-        echo "<script> 
-                alert('Username sudah digunakan! Silakan gunakan username lain.');
-              </script>";
+        header('Location: index.php?status=username_used');
+        exit;
     } else {
-        echo "<script> 
-                alert('Pengguna gagal ditambahkan.');
-                document.location.href = 'tambah.php';
-              </script>";
+        header('Location: index.php?status=failed');
+        exit;
     }
 }
+
+include_once '../../layout/header.php';
 
 ?>
 
@@ -33,6 +42,9 @@ if (isset($_POST['tambah'])) {
         </div>
         <div class="card-body">
             <form action="" method="post">
+                <input type="hidden" name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="nama" class="form-label fw-bold">Nama Lengkap</label>
@@ -52,11 +64,11 @@ if (isset($_POST['tambah'])) {
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label for="role" class="form-label fw-bold">Hak Akses (Role)</label>
+                        <label for="role" class="form-label fw-bold">Role</label>
                         <select class="form-select" id="role" name="role" required>
-                            <option value="Petugas">Petugas (Operasional Stok & Peminjaman)</option>
-                            <option value="Admin">Admin (Akses Penuh)</option>
-                            <option value="Kepala">Kepala (Monitoring & Laporan)</option>
+                            <option value="petugas">petugas (Operasional Stok & Peminjaman)</option>
+                            <option value="admin">admin (Akses Penuh)</option>
+                            <option value="kepala">kepala (Monitoring & Laporan)</option>
                         </select>
                     </div>
                 </div>

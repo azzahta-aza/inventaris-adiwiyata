@@ -3,38 +3,49 @@
 include_once '../../app/app.php';
 check_role(['admin', 'petugas']);
 
-include_once '../../layout/header.php';
+$id_pinjam = (int)($_GET['id_pinjam'] ?? 0);
 
-$id_pinjam = (int)$_GET['id_pinjam'];
-
-$peminjaman_data = select_peminjaman("SELECT p.*, b.nama_barang, b.kode_barang 
-                                      FROM peminjaman p 
-                                      JOIN barang b ON p.id_barang = b.id_barang 
-                                      WHERE p.id_pinjam = $id_pinjam");
+$peminjaman_data = select_peminjaman(
+    "SELECT p.*, b.nama_barang, b.kode_barang
+    FROM peminjaman p
+    JOIN barang b ON p.id_barang = b.id_barang
+    WHERE p.id_pinjam = $id_pinjam"
+);
 
 if (empty($peminjaman_data)) {
-    echo "<script>
-            alert('Data peminjaman tidak ditemukan.');
-            document.location.href = 'index.php';
-          </script>";
+    header('Location: index.php?edit_status=not_found');
     exit;
 }
 
 $pinjam = $peminjaman_data[0];
 
 if (isset($_POST['ubah'])) {
-    if (update_peminjaman($_POST) > 0) {
-        echo "<script> 
-                alert('Data peminjaman berhasil diperbarui.');
-                document.location.href = 'index.php';
-              </script>";
-    } else {
-        echo "<script> 
-                alert('Data peminjaman tidak berubah atau gagal diperbarui.');
-                document.location.href = 'index.php';
-              </script>";
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    $session_token = $_SESSION['csrf_token'] ?? '';
+
+    if (
+        !is_string($csrf_token) ||
+        !is_string($session_token) ||
+        $session_token === '' ||
+        !hash_equals($session_token, $csrf_token)
+    ) {
+        http_response_code(403);
+        exit('Permintaan ditolak. Silakan muat ulang halaman dan coba lagi.');
     }
+
+    $result = update_peminjaman($_POST);
+
+    if ($result === 1) {
+        header('Location: index.php?edit_status=success');
+        exit;
+    } else {
+        header('Location: index.php?edit_status=failed');
+        exit;
+    }
+
 }
+
+include_once '../../layout/header.php';
 
 ?>
 
@@ -45,6 +56,11 @@ if (isset($_POST['ubah'])) {
         </div>
         <div class="card-body">
             <form action="" method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <input type="hidden" name="id_pinjam" value="<?= $pinjam['id_pinjam']; ?>">
 
                 <div class="row">

@@ -62,7 +62,7 @@ if ($user_role === 'admin') {
         <h1 class="h3 fw-bold text-danger mb-2">403 - Akses Ditolak</h1>
         <h6 class="text-secondary mb-3">Forbidden Access</h6>
         <p class="text-muted mb-4">
-            Halo <strong><?= htmlspecialchars($user_nama); ?></strong> (Role: <span class="badge bg-secondary"><?= htmlspecialchars(ucfirst($user_role ?: 'Guest')); ?></span>), 
+            Halo <strong><?= htmlspecialchars($user_nama); ?></strong> (Role: <span class="badge bg-secondary"><?= htmlspecialchars(ucfirst($user_role ?: 'Guest')); ?></span>),
             Anda tidak memiliki izin/hak akses untuk membuka halaman atau menjalankan tindakan ini.
         </p>
 

@@ -1,24 +1,37 @@
 <?php
 
 include_once '../../app/app.php';
-check_role('admin');
+
+check_role(['admin', 'petugas']);
+
+// Proses tambah kategori
+if (isset($_POST['tambah'])) {
+    $token_sesi = $_SESSION['csrf_token'] ?? '';
+    $token_form = $_POST['csrf_token'] ?? '';
+
+    if (
+        !is_string($token_sesi) ||
+        !is_string($token_form) ||
+        $token_sesi === '' ||
+        !hash_equals($token_sesi, $token_form)
+    ) {
+        http_response_code(403);
+        exit('Permintaan tidak valid. Silakan muat ulang halaman.');
+    }
+
+    $hasil = create_kategori($_POST);
+
+    if ($hasil > 0) {
+        header('Location: index.php?status=success');
+        exit;
+    }
+
+    header('Location: index.php?status=failed');
+    exit;
+}
 
 include '../../layout/header.php';
 
-//chek apakah tombol tambah ditekan
-if (isset($_POST['tambah'])) {
-    if (create_kategori($_POST) > 0) {
-        echo "<script> 
-                alert('Data Kategori Berhasil Ditambahkan');
-                document.location.href = 'index.php';
-                </script>";
-    } else {
-        echo "<script>
-                alert('Data Kategori Gagal Ditambahkan');
-                document.location.href = 'index.php';
-                </script>";
-    }
-}
 
 ?>
 
@@ -31,6 +44,9 @@ if (isset($_POST['tambah'])) {
                 </div>
                 <div class="card-body p-4">
                     <form action="" method="post">
+                        <input type="hidden" name="csrf_token"
+                            value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        >
                         <div class="mb-3">
                             <label for="nama_kategori" class="form-label fw-semibold">Nama Kategori <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="nama_kategori" name="nama" placeholder="Masukkan nama kategori..." required autofocus>

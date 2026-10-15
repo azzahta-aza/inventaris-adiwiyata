@@ -5,16 +5,13 @@ check_role(['admin', 'kepala']);
 
 include_once '../../layout/header.php';
 
-$data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok 
-                                  FROM kategori k 
-                                  LEFT JOIN barang b ON k.id_kategori = b.id_kategori 
-                                  GROUP BY k.id_kategori 
+$data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
+                                  FROM kategori k
+                                  LEFT JOIN barang b ON k.id_kategori = b.id_kategori
+                                  GROUP BY k.id_kategori
                                   ORDER BY k.nama_kategori ASC");
 
 ?>
-
-<!-- html2pdf.js CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -23,24 +20,17 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
             <p class="text-muted small mb-0">Rekapitulasi kategori barang inventaris beserta total jenis barang dan stok</p>
         </div>
         <div>
-            <button type="button" onclick="exportLaporanPDF()" class="btn btn-danger shadow-sm">
+            <a href="cetakpdf.php?tipe=kategori" target="_blank" class="btn btn-danger shadow-sm">
                 <i class="bi bi-file-earmark-pdf-fill me-1"></i> Export to PDF
-            </button>
+            </a>
         </div>
     </div>
 
-    <div class="card shadow-sm" id="area-laporan">
+    <div class="card shadow-sm">
         <div class="card-body p-4">
-            <div class="text-center mb-4 d-none" id="kop-laporan">
-                <h3 class="fw-bold mb-1">LAPORAN REKAPITULASI KATEGORI BARANG</h3>
-                <p class="text-muted mb-0">Sistem Manajemen & Pengelolaan Sarana Prasarana</p>
-                <small>Tanggal Export: <?= date('d F Y, H:i'); ?> WIB</small>
-                <hr style="border-top: 2px solid #000; margin-top: 10px;">
-            </div>
-
             <div class="table-responsive">
                 <table class="table table-bordered table-striped align-middle">
-                    <thead class="table-dark text-center">
+                    <thead class="table-white text-center">
                         <tr>
                             <th width="5%">No</th>
                             <th>Nama Kategori</th>
@@ -58,7 +48,7 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
                             <?php foreach ($data_kategori as $k) : ?>
                                 <tr>
                                     <td><?= $no++; ?></td>
-                                    <td class="text-start fw-semibold"><?= htmlspecialchars($k['nama_kategori']); ?></td>
+                                    <td class="fw-semibold"><?= htmlspecialchars($k['nama_kategori']); ?></td>
                                     <td><?= $k['total_barang']; ?> Jenis</td>
                                     <td class="fw-bold"><?= $k['total_stok']; ?> Unit</td>
                                 </tr>
@@ -67,40 +57,12 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
                     </tbody>
                 </table>
             </div>
-
-            <!-- Tanda Tangan Khusus PDF -->
-            <div class="row mt-4 d-none" id="ttd-laporan">
-                <div class="col-6"></div>
-                <div class="col-6 text-center">
-                    <p class="mb-4">Mengetahui,<br><strong>Kepala Bagian Sarana & Prasarana</strong></p>
-                    <p class="mt-4 fw-bold text-decoration-underline">( .................................................. )</p>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
 <script>
-function exportLaporanPDF() {
-    const kop = document.getElementById('kop-laporan');
-    const ttd = document.getElementById('ttd-laporan');
-    kop.classList.remove('d-none');
-    ttd.classList.remove('d-none');
-
-    const element = document.getElementById('area-laporan');
-    const opt = {
-        margin:       10,
-        filename:     'Laporan_Kategori_<?= date("Ymd_His"); ?>.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        kop.classList.add('d-none');
-        ttd.classList.add('d-none');
-    });
-}
+// PDF handled by cetakpdf.php
 </script>
 
 <?php include_once '../../layout/footer.php'; ?>

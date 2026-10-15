@@ -4,10 +4,10 @@
           <div class="container-fluid">
             <div class="row align-items-center">
               <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
-                <span>&copy; <?= date('Y'); ?> <strong>Sistem Informasi Inventory</strong>. All rights reserved.</span>
+                <span>&copy; <?= date('Y'); ?><strong> SI Inventory Barang Adiwiyata</strong>. Semua hak dilindungi.</span>
               </div>
               <div class="col-md-6 text-center text-md-end">
-                <span class="text-muted small">Device-Friendly & Responsive UI</span>
+                <span class="text-muted small"> Tampilan Responsi</span>
               </div>
             </div>
           </div>

@@ -18,19 +18,16 @@ if ($filter_kondisi !== '') {
 
 $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
-$data_barang = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi 
-                              FROM barang b 
-                              LEFT JOIN kategori k ON b.id_kategori = k.id_kategori 
-                              LEFT JOIN lokasi l ON b.id_lokasi = l.id_lokasi 
-                              $where_sql 
+$data_barang = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi
+                              FROM barang b
+                              LEFT JOIN kategori k ON b.id_kategori = k.id_kategori
+                              LEFT JOIN lokasi l ON b.id_lokasi = l.id_lokasi
+                              $where_sql
                               ORDER BY b.nama_barang ASC");
 
 $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori ASC");
 
 ?>
-
-<!-- html2pdf.js CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -40,9 +37,9 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
         </div>
         <div>
             <!-- Tombol Utama Export to PDF -->
-            <button type="button" onclick="exportLaporanPDF()" class="btn btn-danger shadow-sm">
+            <a href="cetakpdf.php?tipe=barang&id_kategori=<?= $filter_kategori; ?>&kondisi=<?= urlencode($filter_kondisi); ?>" target="_blank" class="btn btn-danger shadow-sm">
                 <i class="bi bi-file-earmark-pdf-fill me-1"></i> Export to PDF
-            </button>
+            </a>
         </div>
     </div>
 
@@ -79,19 +76,11 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
     </div>
 
     <!-- Printable & Exportable Area -->
-    <div class="card shadow-sm" id="area-laporan">
+    <div class="card shadow-sm">
         <div class="card-body p-4">
-            <!-- Kop Laporan untuk Hasil PDF -->
-            <div class="text-center mb-4 d-none" id="kop-laporan">
-                <h3 class="fw-bold mb-1">LAPORAN INVENTARIS BARANG</h3>
-                <p class="text-muted mb-0">Sistem Manajemen & Pengelolaan Sarana Prasarana</p>
-                <small>Tanggal Export: <?= date('d F Y, H:i'); ?> WIB</small>
-                <hr style="border-top: 2px solid #000; margin-top: 10px;">
-            </div>
-
             <div class="table-responsive">
-                <table class="table table-bordered table-striped align-middle">
-                    <thead class="table-dark text-center">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-white text-center">
                         <tr>
                             <th width="5%">No</th>
                             <th>Kode Barang</th>
@@ -102,7 +91,7 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
                             <th>Satuan</th>
                             <th>Kondisi</th>
                         </tr>
-                    </thead>
+                    </thead>    
                     <tbody class="text-center">
                         <?php if (empty($data_barang)) : ?>
                             <tr>
@@ -111,10 +100,10 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
                         <?php else : ?>
                             <?php $no = 1; $total_stok = 0; ?>
                             <?php foreach ($data_barang as $b) : $total_stok += (int)$b['stok']; ?>
-                                <tr>
+                                <tr class="text-center">
                                     <td><?= $no++; ?></td>
                                     <td class="fw-bold"><?= htmlspecialchars($b['kode_barang']); ?></td>
-                                    <td class="text-start"><?= htmlspecialchars($b['nama_barang']); ?></td>
+                                    <td><?= htmlspecialchars($b['nama_barang']); ?></td>
                                     <td><?= htmlspecialchars($b['nama_kategori'] ?? '-'); ?></td>
                                     <td><?= htmlspecialchars($b['nama_lokasi'] ?? '-'); ?></td>
                                     <td class="fw-bold"><?= $b['stok']; ?></td>
@@ -130,43 +119,12 @@ $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori 
                     </tbody>
                 </table>
             </div>
-
-            <!-- Tanda Tangan Khusus PDF -->
-            <div class="row mt-4 d-none" id="ttd-laporan">
-                <div class="col-6"></div>
-                <div class="col-6 text-center">
-                    <p class="mb-4">Mengetahui,<br><strong>Kepala Bagian Sarana & Prasarana</strong></p>
-                    <p class="mt-4 fw-bold text-decoration-underline">( .................................................. )</p>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
 <script>
-function exportLaporanPDF() {
-    const kop = document.getElementById('kop-laporan');
-    const ttd = document.getElementById('ttd-laporan');
-    
-    // Tampilkan kop dan ttd saat proses convert ke PDF
-    kop.classList.remove('d-none');
-    ttd.classList.remove('d-none');
-
-    const element = document.getElementById('area-laporan');
-    const opt = {
-        margin:       10,
-        filename:     'Laporan_Data_Barang_<?= date("Ymd_His"); ?>.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        // Sembunyikan kembali kop dan ttd di tampilan layar biasa
-        kop.classList.add('d-none');
-        ttd.classList.add('d-none');
-    });
-}
+// PDF handled by cetakpdf.php
 </script>
 
 <?php include_once '../../layout/footer.php'; ?>

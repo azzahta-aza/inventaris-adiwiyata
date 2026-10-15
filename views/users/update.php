@@ -3,39 +3,58 @@
 include_once '../../app/app.php';
 check_role('admin');
 
-include_once '../../layout/header.php';
+$id_user = filter_input(INPUT_GET, 'id_user', FILTER_VALIDATE_INT);
 
-$id_user = (int)$_GET['id_user'];
-$user_data = select_users("SELECT * FROM users WHERE id_user = $id_user");
+$id_user = filter_input(INPUT_GET, 'id_user', FILTER_VALIDATE_INT);
+
+if ($id_user === false || $id_user === null || $id_user <= 0) {
+    header('Location: index.php?edit_status=invalid');
+    exit;
+}
+
+$user_data = select_users(
+    "SELECT * FROM users WHERE id_user = $id_user"
+);
 
 if (empty($user_data)) {
-    echo "<script>
-            alert('Data pengguna tidak ditemukan!');
-            document.location.href = 'index.php';
-          </script>";
+    header('Location: index.php?edit_status=not_found');
     exit;
 }
 
 $user = $user_data[0];
 
 if (isset($_POST['ubah'])) {
+    $token_sesi = $_SESSION['csrf_token'] ?? '';
+    $token_form = $_POST['csrf_token'] ?? '';
+
+    if (
+        !is_string($token_sesi) ||
+        !is_string($token_form) ||
+        $token_sesi === '' ||
+        !hash_equals($token_sesi, $token_form)
+    ) {
+        http_response_code(403);
+        exit('Permintaan tidak valid. Silakan muat ulang halaman.');
+    }
+
     $result = update_user($_POST);
+
     if ($result > 0) {
-        echo "<script> 
-                alert('Data pengguna berhasil diperbarui.');
-                document.location.href = 'index.php';
-              </script>";
+        header('Location: index.php?edit_status=success');
+        exit;
     } elseif ($result === -1) {
-        echo "<script> 
-                alert('Username sudah digunakan oleh akun lain!');
-              </script>";
+        header('Location: index.php?edit_status=duplicate');
+        exit;
+    } elseif ($result === -2) {
+        header('Location: index.php?edit_status=last_admin');
+        exit;
     } else {
-        echo "<script> 
-                alert('Data tidak berubah atau gagal diperbarui.');
-                document.location.href = 'index.php';
-              </script>";
+        header('Location: index.php?edit_status=failed');
+        exit;
     }
 }
+
+include_once '../../layout/header.php';
 
 ?>
 
@@ -46,6 +65,9 @@ if (isset($_POST['ubah'])) {
         </div>
         <div class="card-body">
             <form action="" method="post">
+                <input type="hidden" name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                >
                 <input type="hidden" name="id_user" value="<?= $user['id_user']; ?>">
 
                 <div class="row">
@@ -69,9 +91,9 @@ if (isset($_POST['ubah'])) {
                     <div class="col-md-6 mb-3">
                         <label for="role" class="form-label fw-bold">Hak Akses (Role)</label>
                         <select class="form-select" id="role" name="role" required>
-                            <option value="Petugas" <?= ($user['role'] === 'Petugas') ? 'selected' : ''; ?>>Petugas (Operasional Stok & Peminjaman)</option>
-                            <option value="Admin" <?= ($user['role'] === 'Admin') ? 'selected' : ''; ?>>Admin (Akses Penuh)</option>
-                            <option value="Kepala" <?= ($user['role'] === 'Kepala') ? 'selected' : ''; ?>>Kepala (Monitoring & Laporan)</option>
+                            <option value="petugas" <?= ($user['role'] === 'petugas') ? 'selected' : ''; ?>>Petugas (Operasional Stok & Peminjaman)</option>
+                            <option value="admin" <?= ($user['role'] === 'admin') ? 'selected' : ''; ?>>Admin (Akses Penuh)</option>
+                            <option value="kepala" <?= ($user['role'] === 'kepala') ? 'selected' : ''; ?>>Kepala (Monitoring & Laporan)</option>
                         </select>
                     </div>
                 </div>
