@@ -12,7 +12,7 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
                                   ORDER BY k.nama_kategori ASC");
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>

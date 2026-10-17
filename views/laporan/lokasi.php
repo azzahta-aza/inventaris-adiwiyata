@@ -12,7 +12,7 @@ $data_lokasi = select_lokasi("SELECT l.*, COUNT(b.id_barang) as total_barang, CO
                               ORDER BY l.nama_lokasi ASC");
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>

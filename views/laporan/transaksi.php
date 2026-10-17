@@ -32,7 +32,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                                     ORDER BY t.tanggal DESC");
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>

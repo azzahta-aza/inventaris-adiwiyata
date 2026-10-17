@@ -86,7 +86,7 @@ $tanggal_formatted = "$nama_hari, $tgl_num $bln_num $thn_num";
 
 include '../../layout/header.php';
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <style>
   .stat-card {
     border: 1px solid #edf2f7;
@@ -147,7 +147,7 @@ include '../../layout/header.php';
     }
   }
 </style>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid px-0">
 
   <!-- 1. WELCOME & QUICK ACTIONS HEADER CARD -->

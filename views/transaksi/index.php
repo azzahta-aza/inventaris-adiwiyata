@@ -29,7 +29,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                                     ORDER BY t.id_transaksi DESC");
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
      <?php if ($transaction_message !== null) : ?>
         <div class="alert alert-<?= htmlspecialchars($transaction_message_type, ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">

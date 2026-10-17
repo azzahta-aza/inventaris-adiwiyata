@@ -89,7 +89,7 @@ if ($return_status === 'success') {
 }
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2"> 
     <?php if ($return_message !== null) : ?>
         <div class="alert alert-<?= htmlspecialchars($return_message_type, ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">

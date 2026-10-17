@@ -50,7 +50,7 @@ include '../../layout/header.php';
 $data_kategori = select_kategori("SELECT * FROM kategori");
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <?php if ($delete_message !== null) : ?>
         <div class="alert <?= $delete_status === 'success' ? 'alert-success' : 'alert-danger'; ?> alert-dismissible fade show" role="alert">
@@ -129,17 +129,6 @@ $data_kategori = select_kategori("SELECT * FROM kategori");
             </div>
         </div>
     </div>
-     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800"></h1>
-            <p class="text-muted small mb-0"></p>
-        </div>
-        <?php if (has_role(['admin', 'petugas'])) : ?>
-        <a href="./tambah.php" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i> Tambah Kategori
-        </a>
-        <?php endif; ?>
-    </div>    
 </div>
                          
 <?php include '../../layout/footer.php'; ?>

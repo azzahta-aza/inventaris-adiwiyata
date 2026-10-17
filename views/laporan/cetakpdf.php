@@ -142,6 +142,7 @@ if ($tipe === 'peminjaman') {
 
 
 ?>
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <!doctype html>
 <html lang="id">
 <head>

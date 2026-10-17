@@ -61,6 +61,8 @@ $data_barang = select_barang(
 
 ?>
 
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
+
 <div class="container-fluid py-2">
     <?php if ($delete_message !== null) : ?>
         <div class="alert <?= $delete_status === 'success' ? 'alert-success' : 'alert-danger'; ?> alert-dismissible fade show" role="alert">
@@ -95,7 +97,7 @@ $data_barang = select_barang(
     </div>
 
     <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
+        <div class="card-body p-7">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0 align-middle">
                     <thead class="table-header-green text-center">

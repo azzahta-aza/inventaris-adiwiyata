@@ -36,7 +36,7 @@ if (isset($_POST['simpan_transaksi'])) {
 include_once '../../layout/header.php';
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">

@@ -28,7 +28,7 @@ $data_barang = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi
 $data_kategori = select_kategori("SELECT * FROM kategori ORDER BY nama_kategori ASC");
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>

@@ -51,7 +51,7 @@ include_once '../../layout/header.php';
         $tambah_message = 'Peminjaman barang gagal dicatat.';
     }
     ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
     <?php if ($tambah_message !== null) : ?>
         <div class="alert alert-<?= htmlspecialchars($tambah_message_type, ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">
             <?= htmlspecialchars($tambah_message, ENT_QUOTES, 'UTF-8'); ?>

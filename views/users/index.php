@@ -73,7 +73,7 @@ $data_users = select_users(
 include_once '../../layout/header.php';
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <?php if ($delete_message !== null) : ?>
         <div class="alert <?= $delete_status === 'success' ? 'alert-success' : 'alert-danger'; ?> alert-dismissible fade show" role="alert">

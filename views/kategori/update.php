@@ -1,4 +1,3 @@
-
 <?php
 
 include_once '../../app/app.php';
@@ -52,7 +51,7 @@ if (isset($_POST['ubah'])) {
 include '../../layout/header.php';
 
 ?>
-
+<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
