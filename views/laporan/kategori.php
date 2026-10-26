@@ -5,11 +5,47 @@ check_role(['admin', 'kepala']);
 
 include_once '../../layout/header.php';
 
+$sql_kategori_base = "SELECT k.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
+                      FROM kategori k
+                      LEFT JOIN barang b ON k.id_kategori = b.id_kategori
+                      GROUP BY k.id_kategori";
+
+// Hitung total data
+$sql_count_kategori = "SELECT COUNT(*) AS total FROM ($sql_kategori_base) AS sub";
+$result_count_kategori = mysqli_query($db, $sql_count_kategori);
+$total_data_kategori = 0;
+if ($result_count_kategori) {
+    $row_count_kategori = mysqli_fetch_assoc($result_count_kategori);
+    $total_data_kategori = (int) ($row_count_kategori['total'] ?? 0);
+}
+
+// Pengaturan pagination
+$limit = 10;
+$total_pages_kategori = max(1, (int) ceil($total_data_kategori / $limit));
+
+$current_page_kategori = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+$current_page_kategori = ($current_page_kategori !== false && $current_page_kategori !== null)
+    ? max(1, min($current_page_kategori, $total_pages_kategori))
+    : 1;
+
+$offset_kategori = ($current_page_kategori - 1) * $limit;
+
+$pagination = [
+    'page' => $current_page_kategori,
+    'total_pages' => $total_pages_kategori,
+    'total' => $total_data_kategori,
+    'from' => $total_data_kategori > 0 ? $offset_kategori + 1 : 0,
+    'to' => min($offset_kategori + $limit, $total_data_kategori)
+];
+
+$pagination_params = [];
+
 $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
                                   FROM kategori k
                                   LEFT JOIN barang b ON k.id_kategori = b.id_kategori
                                   GROUP BY k.id_kategori
-                                  ORDER BY k.nama_kategori ASC");
+                                  ORDER BY k.nama_kategori ASC
+                                  LIMIT $limit OFFSET $offset_kategori");
 
 ?>
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
@@ -44,7 +80,7 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
                                 <td colspan="4" class="text-muted py-4">Belum ada data kategori.</td>
                             </tr>
                         <?php else : ?>
-                            <?php $no = 1; ?>
+                            <?php $no = $offset_kategori + 1; ?>
                             <?php foreach ($data_kategori as $k) : ?>
                                 <tr>
                                     <td><?= $no++; ?></td>
@@ -57,6 +93,7 @@ $data_kategori = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang
                     </tbody>
                 </table>
             </div>
+            <?php include '../../layout/pagination.php'; ?>
         </div>
     </div>
 </div>

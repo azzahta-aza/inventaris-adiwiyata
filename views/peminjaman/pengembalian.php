@@ -63,7 +63,8 @@ include_once '../../layout/header.php';
                     </div>
                     <div class="col-md-6">
                         <strong>Jumlah Dipinjam:</strong> <?= $pinjam['jumlah']; ?> <?= htmlspecialchars($pinjam['satuan']); ?><br>
-                        <strong>Tanggal Pinjam:</strong> <?= date('d/m/Y', strtotime($pinjam['tanggal_pinjam'])); ?>
+                        <strong>Tanggal Pinjam:</strong> <?= date('d/m/Y', strtotime($pinjam['tanggal_pinjam'])); ?><br>
+                        <strong>Tanggal Kembali (Rencana):</strong> <?= !empty($pinjam['tanggal_kembali']) ? date('d/m/Y', strtotime($pinjam['tanggal_kembali'])) : '-'; ?>
                     </div>
                 </div>
             </div>
@@ -78,8 +79,20 @@ include_once '../../layout/header.php';
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="tanggal_kembali" class="form-label fw-bold">Tanggal Pengembalian</label>
-                        <input type="date" class="form-control" id="tanggal_kembali" name="tanggal_kembali" value="<?= date('Y-m-d'); ?>" required>
+                        <label for="tanggal_kembali" class="form-label fw-bold">
+                                
+                        </label>
+
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="tanggal_kembali"
+                        name="tanggal_kembali"
+                        value="<?= !empty($pinjam['tanggal_kembali']) ? htmlspecialchars($pinjam['tanggal_kembali'], ENT_QUOTES, 'UTF-8') : date('Y-m-d'); ?>"
+                        min="<?= htmlspecialchars($pinjam['tanggal_pinjam'], ENT_QUOTES, 'UTF-8'); ?>"
+                        required
+                    >
+                    <div class="form-text">Tanggal saat barang dikembalikan (minimal tanggal pinjam). Bisa diubah sesuai kenyataan.</div>
                     </div>
 
                     <div class="col-md-6 mb-3">

@@ -1,7 +1,6 @@
 <?php
 
 include_once '../../app/app.php';
-include '../../layout/pagination.php';
 check_role(['admin', 'petugas']);
 
 $transaction_status = $_GET['status'] ?? null;
@@ -21,12 +20,93 @@ if ($transaction_status === 'success') {
 
 include_once '../../layout/header.php';
 
-// Ambil data transaksi dengan JOIN ke barang dan users
-$data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas
-                                    FROM transaksi t
-                                    LEFT JOIN barang b ON t.id_barang = b.id_barang
-                                    LEFT JOIN users u ON t.id_user = u.id_user
-                                    ORDER BY t.id_transaksi DESC");
+// Pencarian dan filter transaksi
+$keyword = trim($_GET['keyword'] ?? '');
+$jenis_filter = $_GET['jenis_filter'] ?? '';
+
+$keyword = substr($keyword, 0, 50);
+
+if (!in_array($jenis_filter, ['', 'masuk', 'keluar'], true)) {
+    $jenis_filter = '';
+}
+
+$sql_where = '';
+
+if ($keyword !== '') {
+    $keyword_sql = mysqli_real_escape_string($db, $keyword);
+    $sql_where .= " AND (
+        b.nama_barang LIKE '%$keyword_sql%'
+        OR b.kode_barang LIKE '%$keyword_sql%'
+        OR t.keterangan LIKE '%$keyword_sql%'
+    )";
+}
+
+if ($jenis_filter !== '') {
+    $jenis_sql = mysqli_real_escape_string($db, $jenis_filter);
+    $sql_where .= " AND t.jenis_transaksi = '$jenis_sql'";
+}
+
+// Pengaturan pagination
+$limit = 10;
+
+$current_page = filter_input(
+    INPUT_GET,
+    'page',
+    FILTER_VALIDATE_INT
+);
+
+// Hitung data transaksi sesuai pencarian dan filter
+$result_count = mysqli_query(
+    $db,
+    "SELECT COUNT(*) AS total
+     FROM transaksi t
+     LEFT JOIN barang b ON t.id_barang = b.id_barang
+     WHERE 1=1 $sql_where"
+);
+
+if (!$result_count) {
+    die("Query jumlah transaksi gagal: " . mysqli_error($db));
+}
+
+$total_data = (int) mysqli_fetch_assoc($result_count)['total'];
+
+// Hitung jumlah halaman
+$total_pages = max(1, (int) ceil($total_data / $limit));
+
+// Pastikan halaman valid
+$current_page = ($current_page !== false && $current_page !== null)
+    ? max(1, min($current_page, $total_pages))
+    : 1;
+
+// Hitung data yang dilewati
+$offset = ($current_page - 1) * $limit;
+
+// Ambil transaksi sesuai halaman dan filter
+$data_transaksi = select_transaksi(
+    "SELECT
+        t.*,
+        b.kode_barang,
+        b.nama_barang,
+        b.satuan,
+        u.nama AS nama_petugas
+     FROM transaksi t
+     LEFT JOIN barang b ON t.id_barang = b.id_barang
+     LEFT JOIN users u ON t.id_user = u.id_user
+     WHERE 1=1 $sql_where
+     ORDER BY t.id_transaksi DESC
+     LIMIT $limit OFFSET $offset"
+);
+
+// Data untuk komponen pagination
+$pagination = [
+    'page' => $current_page,
+    'total_pages' => $total_pages,
+    'total' => $total_data,
+    'from' => $total_data > 0 ? $offset + 1 : 0,
+    'to' => min($offset + $limit, $total_data)
+];
+
+$pagination_params = [];
 
 ?>
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
@@ -45,6 +125,43 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
         <a href="tambah.php" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i> Catat Transaksi
         </a>
+    </div>
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body">
+            <form action="index.php" method="GET" class="row g-2 align-items-end">
+                <div class="col-lg-5 col-md-6">
+                    <label for="keyword" class="form-label fw-bold">Pencarian Transaksi</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="keyword"
+                        name="keyword"
+                        placeholder="Cari nama barang, kode, atau keterangan..."
+                        value="<?= htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>"
+                    >
+                </div>
+                <div class="col-lg-5 col-md-6">
+                    <label for="jenis_filter" class="form-label fw-bold">Filter Jenis</label>
+                    <select class="form-select" id="jenis_filter" name="jenis_filter">
+                        <option value="">-- Semua Jenis --</option>
+                        <option value="masuk" <?= $jenis_filter === 'masuk' ? 'selected' : ''; ?>>
+                            <i class="bi bi-arrow-down-circle"></i> Barang Masuk
+                        </option>
+                        <option value="keluar" <?= $jenis_filter === 'keluar' ? 'selected' : ''; ?>>
+                            <i class="bi bi-arrow-up-circle"></i> Barang Keluar
+                        </option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                    <a href="index.php" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
@@ -68,7 +185,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                                 <td colspan="8" class="text-center text-muted py-4">Belum ada data transaksi barang.</td>
                             </tr>
                         <?php else : ?>
-                            <?php $no = 1; ?>
+                            <?php $no = $offset + 1; ?>
                             <?php foreach ($data_transaksi as $tr) : ?>
                                 <tr>
                                     <td class="text-center"><?= $no++; ?></td>
@@ -109,6 +226,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
             </div>
         </div>
     </div>
+    <?php include '../../layout/pagination.php'; ?>
 </div>
 
 <?php include_once '../../layout/footer.php'; ?>

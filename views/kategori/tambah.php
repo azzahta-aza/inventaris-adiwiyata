@@ -4,7 +4,7 @@ include_once '../../app/app.php';
 
 check_role(['admin', 'petugas']);
 
-// Proses tambah kategori
+// Proses tambah lokasi
 if (isset($_POST['tambah'])) {
     $token_sesi = $_SESSION['csrf_token'] ?? '';
     $token_form = $_POST['csrf_token'] ?? '';
@@ -19,10 +19,15 @@ if (isset($_POST['tambah'])) {
         exit('Permintaan tidak valid. Silakan muat ulang halaman.');
     }
 
-    $hasil = create_kategori($_POST);
+   $hasil = create_kategori($_POST);
 
-    if ($hasil > 0) {
+    if ($hasil === 1) {
         header('Location: index.php?status=success');
+        exit;
+    }
+
+    if ($hasil === -2) {
+        header('Location: index.php?status=duplicate');
         exit;
     }
 
@@ -31,9 +36,8 @@ if (isset($_POST['tambah'])) {
 }
 
 include '../../layout/header.php';
-
-
 ?>
+
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
 <div class="container-fluid py-2">
     <div class="row justify-content-center">
@@ -49,7 +53,7 @@ include '../../layout/header.php';
                         >
                         <div class="mb-3">
                             <label for="nama_kategori" class="form-label fw-semibold">Nama Kategori <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="nama_kategori" name="nama" placeholder="Masukkan nama kategori..." required autofocus>
+                            <input type="text" class="form-control" id="nama_kategori" name="nama" maxlength="30" placeholder="Masukkan nama kategori..." required autofocus>
                         </div>
 
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2">

@@ -127,16 +127,14 @@ include '../../layout/header.php';
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label for="satuan" class="form-label fw-bold">Satuan</label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="satuan"
-                                name="satuan"
-                                value="<?= htmlspecialchars($barang['satuan'], ENT_QUOTES, 'UTF-8'); ?>"
-                                readonly
-                            >
-                        </div>
+                        <label for="satuan" class="form-label fw-bold">Satuan</label>
+                        <select name="satuan" class="form-select">
+                            <option value="Pcs" <?= ($barang['satuan'] == 'Pcs') ? 'selected' : ''; ?>>Pcs</option>
+                            <option value="Box" <?= ($barang['satuan'] == 'Box') ? 'selected' : ''; ?>>Box</option>
+                            <option value="Set" <?= ($barang['satuan'] == 'Set') ? 'selected' : ''; ?>>Set</option>
+                            <option value="Unit" <?= ($barang['satuan'] == 'Unit') ? 'selected' : ''; ?>>Unit</option>
+                        </select>
+                    </div>
 
                         <div class="col-md-4 mb-3">
                             <label for="kondisi" class="form-label fw-bold">Kondisi Barang</label>

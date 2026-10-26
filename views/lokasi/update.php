@@ -56,7 +56,7 @@ include '../../layout/header.php';
         <div class="col-12 col-md-8 col-lg-6">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-success text-white py-3">
-                    <h5 class="card-title mb-0"><i class="bi bi-pencil-square me-2"></i>Update Lokasi</h5>
+                    <h5 class="card-title mb-0"><i class="bi bi-pencil-square me-2"></i>Update Tempat Penyimpanan</h5>
                 </div>
                 <div class="card-body p-4">
                     <form action="" method="post">
@@ -65,7 +65,7 @@ include '../../layout/header.php';
                         >
                         <input type="hidden" name="id_lokasi" value="<?= $lokasi['id_lokasi']; ?>">
                         <div class="mb-3">
-                            <label for="nama_lokasi" class="form-label fw-semibold">Nama Lokasi <span class="text-danger">*</span></label>
+                            <label for="nama_lokasi" class="form-label fw-semibold">Nama Tempat<span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="nama_lokasi" name="nama" value="<?= htmlspecialchars($lokasi['nama_lokasi']); ?>" placeholder="Nama Lokasi..." required autofocus>
                         </div>
 

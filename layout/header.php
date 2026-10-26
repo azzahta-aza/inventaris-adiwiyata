@@ -83,7 +83,7 @@ $is_lap_lokasi     = strpos($current_path, '/views/laporan/lokasi.php') !== fals
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Judul halaman yang ditampilkan pada tab browser -->
     <title>SI Inventory Barang Adiwiyata</title>
-   <link rel="icon" type="image/png" href="/UKKinventory/img/logo_white.png">
+   <link rel="icon" type="image/png" href="../../img/logo_white.png">
     <!-- Memuat Bootstrap CSS untuk membantu membuat tampilan antarmuka -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <!-- Memuat Bootstrap Icons untuk menggunakan ikon pada menu dan tombol -->
@@ -169,6 +169,16 @@ $is_lap_lokasi     = strpos($current_path, '/views/laporan/lokasi.php') !== fals
         border-right: 1px solid #e2e8f0;
         box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
       }
+
+      .btn-warna {
+          background-color: #ff69b4;
+          color: white;
+          border: none;
+        }
+        .btn-warna:hover {
+          background-color: #ff4fa3;
+          color: white;
+        }
 
       /* Mengatur scrollbar pada sidebar */
       .app-sidebar::-webkit-scrollbar {
@@ -608,7 +618,7 @@ $is_lap_lokasi     = strpos($current_path, '/views/laporan/lokasi.php') !== fals
           </li>
           <li class="sidebar-item">
             <a class="sidebar-link <?= $is_lokasi ? 'active' : ''; ?>" href="../lokasi/index.php">
-              <i class="bi bi-geo-alt"></i> <span>Lokasi</span>
+              <i class="bi bi-geo-alt"></i> <span>Tempat Penyimpanan</span>
             </a>
           </li>
 
@@ -678,7 +688,7 @@ $is_lap_lokasi     = strpos($current_path, '/views/laporan/lokasi.php') !== fals
                   <!-- Menu rekap lokasi -->
                   <li>
                     <a class="sidebar-sublink <?= $is_lap_lokasi ? 'active' : ''; ?>" href="../laporan/lokasi.php">
-                      <i class="bi bi-geo"></i> <span>Rekap Lokasi</span>
+                      <i class="bi bi-geo"></i> <span>Rekap Tempat Penyimpanan</span>
                     </a>
                   </li>
 

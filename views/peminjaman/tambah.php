@@ -5,7 +5,6 @@ check_role(['admin', 'petugas']);
 
 // Ambil data barang yang stoknya > 0 dan kondisinya layak
 $data_barang = select_barang("SELECT * FROM barang WHERE stok > 0 AND kondisi = 'layak' ORDER BY nama_barang ASC");
-$data_users  = has_role('admin') ? select_users("SELECT * FROM users ORDER BY nama ASC") : [];
 
 if (isset($_POST['pinjam'])) {
     $csrf_token = $_POST['csrf_token'] ?? '';
@@ -87,40 +86,67 @@ include_once '../../layout/header.php';
                     <!-- Input Nama Peminjam -->
                     <div class="col-md-6 mb-3">
                         <label for="nama_peminjam" class="form-label fw-bold">Nama Peminjam</label>
-                        <input type="text" class="form-control" id="nama_peminjam" name="nama_peminjam" placeholder="Masukkan nama peminjam (Siswa/Guru/Karyawan)..." required>
+                        <input type="text" class="form-control" id="nama_peminjam" name="nama_peminjam" maxlength="50" placeholder="Masukkan nama peminjam (Siswa/Guru/Karyawan)..." required>
                     </div>
                 </div>
 
                 <div class="row">
                     <!-- Input Tanggal Pinjam -->
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label for="tanggal_pinjam" class="form-label fw-bold">Tanggal Pinjam</label>
-                        <input type="date" class="form-control" id="tanggal_pinjam" name="tanggal_pinjam" value="<?= date('Y-m-d'); ?>" required>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="tanggal_pinjam"
+                            value="<?= date('Y-m-d'); ?>"
+                            readonly
+                        >
+                        <input
+                            type="hidden"
+                            name="tanggal_pinjam"
+                            value="<?= date('Y-m-d'); ?>"
+                        >
+                    </div>
+
+                    <!-- Input Tanggal Kembali -->
+                    <div class="col-md-3 mb-3">
+                        <label for="tanggal_kembali" class="form-label fw-bold">Tanggal Kembali</label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="tanggal_kembali"
+                            name="tanggal_kembali"
+                            min="<?= date('Y-m-d'); ?>"
+                            required
+                        >
                     </div>
 
                     <!-- Input Jumlah Pinjam -->
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label for="jumlah" class="form-label fw-bold">Jumlah Pinjam</label>
-                        <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" required>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="jumlah"
+                            name="jumlah"
+                            value="0"
+                            min="1"
+                            required
+                        >
                     </div>
 
                     <!-- Petugas Pencatat -->
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label for="id_user" class="form-label fw-bold">Petugas Pencatat</label>
-                            <?php if (has_role('admin') && !empty($data_users)) : ?>
-                            <select class="form-select" id="id_user" name="id_user">
-                                <?php foreach ($data_users as $user) : ?>
-                                    <?php if (in_array(strtolower($user['role']), ['admin', 'petugas'])) : ?>
-                                        <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
-                                            <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
-                                        </option>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </select>
-                        <?php else : ?>
-                            <input type="text" class="form-control" value="<?= htmlspecialchars($_SESSION['nama'] ?? 'Petugas'); ?> (<?= htmlspecialchars(ucfirst($_SESSION['role'] ?? 'Petugas')); ?>)" readonly>
-                            <input type="hidden" name="id_user" value="<?= (int)($_SESSION['id_user'] ?? 1); ?>">
-                        <?php endif; ?>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="id_user"
+                            value="<?= htmlspecialchars($_SESSION['nama'] ?? 'Petugas'); ?> (<?= htmlspecialchars(ucfirst($_SESSION['role'] ?? 'Petugas')); ?>)"
+                            readonly
+                        >
+                        <input type="hidden" name="id_user" value="<?= (int)($_SESSION['id_user'] ?? 0); ?>">
+                        <div class="form-text">Otomatis mengikuti pengguna yang sedang login.</div>
                     </div>
                 </div>
 
@@ -133,5 +159,48 @@ include_once '../../layout/header.php';
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tanggalPinjam = document.getElementById('tanggal_pinjam');
+    const tanggalKembali = document.getElementById('tanggal_kembali');
+    const form = tanggalPinjam.closest('form');
+
+    // Tanggal paling awal adalah hari ini
+    const hariIni = '<?= date('Y-m-d'); ?>';
+
+    if (tanggalPinjam) {
+        tanggalPinjam.min = hariIni;
+    }
+
+    if (tanggalKembali) {
+        tanggalKembali.min = hariIni;
+    }
+
+    form.addEventListener('submit', function (event) {
+        const tPinjam = tanggalPinjam.value || hariIni;
+        const tKembali = tanggalKembali ? tanggalKembali.value : '';
+
+        if (!tPinjam || tPinjam < hariIni) {
+            event.preventDefault();
+            alert('Tanggal pinjam tidak boleh sebelum hari ini.');
+            return;
+        }
+
+        if (!tKembali) {
+            event.preventDefault();
+            alert('Tanggal kembali wajib diisi.');
+            if (tanggalKembali) tanggalKembali.focus();
+            return;
+        }
+
+        if (tKembali < tPinjam) {
+            event.preventDefault();
+            alert('Tanggal kembali tidak boleh sebelum tanggal pinjam.');
+            if (tanggalKembali) tanggalKembali.focus();
+            return;
+        }
+    });
+});
+</script>
 
 <?php include_once '../../layout/footer.php'; ?>

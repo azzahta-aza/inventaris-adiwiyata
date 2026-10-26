@@ -1,7 +1,6 @@
 <?php
 
 include_once '../../app/app.php';
-include '../../layout/pagination.php';
 
 check_role('admin');
 
@@ -64,11 +63,57 @@ if ($delete_status === 'success') {
     $delete_message = 'Pengguna gagal dihapus.';
 }
 
+ // Ambil kata kunci pencarian dari URL
+$keyword = trim($_GET['keyword'] ?? '');
+
+// Pengaturan pagination
+$limit = 10;
+$page = max(1, (int) ($_GET['page'] ?? 1));
+
+// Kondisi filter SQL untuk pencarian
+$where_clause = "";
+if ($keyword !== '') {
+    $keyword_esc = mysqli_real_escape_string($db, $keyword);
+    $where_clause = "WHERE nama LIKE '%$keyword_esc%' OR username LIKE '%$keyword_esc%'";
+}
+
+// Hitung seluruh data pengguna (dengan filter pencarian)
+$result_count = mysqli_query(
+    $db,
+    "SELECT COUNT(*) AS total FROM users $where_clause"
+);
+
+if (!$result_count) {
+    die("Query jumlah pengguna gagal: " . mysqli_error($db));
+}
+
+$total_data = (int) mysqli_fetch_assoc($result_count)['total'];
+$total_pages = (int) ceil($total_data / $limit);
+
+// Pastikan halaman masih valid
+$page = min($page, max(1, $total_pages));
+$offset = ($page - 1) * $limit;
+
+// Ambil data pengguna sesuai halaman dan pencarian
 $data_users = select_users(
     "SELECT id_user, nama, username, role
      FROM users
-     ORDER BY id_user DESC"
+     $where_clause
+     ORDER BY id_user DESC
+     LIMIT $limit OFFSET $offset"
 );
+
+// Data untuk komponen pagination agar kata kunci tidak hilang saat pindah halaman
+$pagination = [
+    'current_page' => $page,
+    'total_pages' => $total_pages,
+];
+
+$pagination_params = [];
+
+if ($keyword !== '') {
+    $pagination_params['keyword'] = $keyword;
+}
 
 include_once '../../layout/header.php';
 
@@ -93,14 +138,52 @@ include_once '../../layout/header.php';
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
         </div>
     <?php endif; ?>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Manajemen Pengguna (Users)</h1>
-            <p class="text-muted small mb-0">Kelola hak akses dan akun pengguna sistem inventaris</p>
+
+            <p class="text-muted small mb-2">
+                Kelola hak akses dan akun pengguna sistem inventaris
+            </p>
         </div>
+        <!-- TOMBOL TAMBAH PENGGUNA -->
         <a href="tambah.php" class="btn btn-primary">
             <i class="bi bi-person-plus me-1"></i> Tambah Pengguna
         </a>
+    </div>
+
+    <!-- Card Pencarian Pengguna -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body">
+            <form action="index.php" method="GET" class="row g-2 align-items-end">
+
+                <div class="col-lg-10 col-md-8">
+                    <label for="keyword" class="form-label fw-bold">
+                        Pencarian Pengguna
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="keyword"
+                        name="keyword"
+                        placeholder="nama atau username..."
+                        value="<?= htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>"
+                    >
+                </div>
+
+                <div class="col-lg-2 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+
+                    <a href="index.php" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                    </a>
+                </div>
+
+            </form>
+        </div>
     </div>
 
     <div class="card shadow-sm">
@@ -122,7 +205,7 @@ include_once '../../layout/header.php';
                                 <td colspan="5" class="text-center text-muted py-4">Belum ada data pengguna.</td>
                             </tr>
                         <?php else : ?>
-                            <?php $no = 1; ?>
+                            <?php $no = $offset + 1; ?>
                             <?php foreach ($data_users as $user) : ?>
                                 <tr class="text-center">
                                     <td><?= $no++; ?></td>
@@ -161,6 +244,7 @@ include_once '../../layout/header.php';
             </div>
         </div>
     </div>
+    <?php include '../../layout/pagination.php'; ?>
 </div>
 
 <?php include_once '../../layout/footer.php'; ?>

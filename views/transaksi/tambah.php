@@ -4,7 +4,6 @@ include_once '../../app/app.php';
 check_role(['admin', 'petugas']);
 
 $data_barang = select_barang("SELECT * FROM barang ORDER BY nama_barang ASC");
-$data_users  = has_role('admin') ? select_users("SELECT * FROM users ORDER BY nama ASC") : [];
 $transaction_message = null;
 $transaction_message_type = 'danger';
 
@@ -86,30 +85,44 @@ include_once '../../layout/header.php';
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label for="tanggal" class="form-label fw-bold">Tanggal Transaksi</label>
-                        <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= date('Y-m-d'); ?>" required>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="tanggal"
+                            value="<?= date('Y-m-d'); ?>"
+                            disabled
+                        >
+                        <input
+                            type="hidden"
+                            name="tanggal"
+                            value="<?= date('Y-m-d'); ?>"
+                        >
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label for="jumlah" class="form-label fw-bold">Jumlah</label>
-                        <input type="number" class="form-control" id="jumlah" name="jumlah" min="1" required>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="jumlah"
+                            name="jumlah"
+                            value="0"
+                            min="1"
+                            required
+                        >
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label for="id_user" class="form-label fw-bold">Petugas Pencatat</label>
-                            <?php if (has_role('admin') && !empty($data_users)) : ?>
-                            <select class="form-select" id="id_user" name="id_user">
-                                <?php foreach ($data_users as $user) : ?>
-                                    <?php if (in_array(strtolower($user['role']), ['admin', 'petugas'])) : ?>
-                                        <option value="<?= $user['id_user']; ?>" <?= ($user['id_user'] == ($_SESSION['id_user'] ?? 1)) ? 'selected' : ''; ?>>
-                                            <?= htmlspecialchars($user['nama']); ?> (<?= htmlspecialchars($user['role']); ?>)
-                                        </option>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </select>
-                        <?php else : ?>
-                            <input type="text" class="form-control" value="<?= htmlspecialchars($_SESSION['nama'] ?? 'Petugas'); ?> (<?= htmlspecialchars(ucfirst($_SESSION['role'] ?? 'Petugas')); ?>)" readonly>
-                            <input type="hidden" name="id_user" value="<?= (int)($_SESSION['id_user'] ?? 1); ?>">
-                        <?php endif; ?>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="id_user"
+                            value="<?= htmlspecialchars($_SESSION['nama'] ?? 'Petugas'); ?> (<?= htmlspecialchars(ucfirst($_SESSION['role'] ?? 'Petugas')); ?>)"
+                            readonly
+                        >
+                        <input type="hidden" name="id_user" value="<?= (int)($_SESSION['id_user'] ?? 0); ?>">
+                        <div class="form-text">Otomatis mengikuti pengguna yang sedang login.</div>
                     </div>
 
                 <div class="mb-3">

@@ -54,6 +54,13 @@ if (isset($_POST['tambah'])) {
         exit('Permintaan tidak valid. Silakan muat ulang halaman.');
     }
 
+    $nama_barang = trim($_POST['nama_barang'] ?? '');
+
+    if (mb_strlen($nama_barang, 'UTF-8') > 30) {
+        header('Location: tambah.php?status=nama_terlalu_panjang');
+        exit;
+    }
+
     $hasil = create_barang($_POST);
 
     if ($hasil > 0) {
@@ -68,6 +75,14 @@ if (isset($_POST['tambah'])) {
 include '../../layout/header.php';
 
 ?>
+
+<?php if (isset($_GET['status']) && $_GET['status'] === 'nama_terlalu_panjang') : ?>
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Nama barang tidak boleh lebih dari 30 karakter.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+<?php endif; ?>
 
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
 
@@ -99,8 +114,23 @@ include '../../layout/header.php';
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label for="nama_barang" class="form-label fw-bold">Nama Barang</label>
-                        <input type="text" class="form-control" id="nama_barang" name="nama_barang" placeholder="Masukkan nama barang..." required>
+                        <label for="nama_barang" class="form-label fw-bold">
+                            Nama Barang
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nama_barang"
+                            name="nama_barang"
+                            placeholder="Masukkan nama barang..."
+                            maxlength="30"
+                            required
+                        >
+
+                        <div class="form-text">
+                            Nama barang maksimal 30 karakter.
+                        </div>
                     </div>
                 </div>
 
@@ -137,7 +167,15 @@ include '../../layout/header.php';
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label for="stok" class="form-label fw-bold">Stok</label>
-                        <input type="number" class="form-control" id="stok" name="stok" min="0" required>
+                      <input
+                            type="number"
+                            class="form-control"
+                            id="stok"
+                            name="stok"
+                            value="0"
+                            min="0"
+                            required
+                        >
                     </div>
 
                     <!-- SATUAN SELECT -->
@@ -175,6 +213,6 @@ include '../../layout/header.php';
             </form>
         </div>
     </div>
-</div>
+</div>      
 
 <?php include_once '../../layout/footer.php'; ?>

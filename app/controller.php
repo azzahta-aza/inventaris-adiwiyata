@@ -272,197 +272,184 @@ function create_kategori($post)
     return $success && $affected > 0 ? 1 : -1;
 }
 
-
-function update_kategori($post)
-{
-    if (!has_role(['admin', 'petugas'])) {
-        return 0;
-    }
-
-    $id_kategori = (int)($post['id_kategori'] ?? 0);
-    $nama_kategori = trim($post['nama'] ?? '');
-
-    if ($id_kategori <= 0 || $nama_kategori === '') {
-        return 0;
-    }
-
-    global $db;
-
-    // Pastikan kategori yang akan diedit tersedia.
-    $stmt = mysqli_prepare(
-        $db,
-        "SELECT id_kategori
-         FROM kategori
-         WHERE id_kategori = ?"
-    );
-
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal memeriksa kategori: ' . mysqli_error($db));
-        return 0;
-    }
-
-    mysqli_stmt_bind_param($stmt, 'i', $id_kategori);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $kategori_ada = mysqli_num_rows($result) > 0;
-    mysqli_stmt_close($stmt);
-
-    if (!$kategori_ada) {
-        return 0;
-    }
-
-    // Periksa apakah nama digunakan kategori lain.
-    $stmt = mysqli_prepare(
-        $db,
-        "SELECT id_kategori
-         FROM kategori
-         WHERE nama_kategori = ?
-         AND id_kategori != ?"
-    );
-
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal memeriksa duplikat kategori: ' . mysqli_error($db));
-        return 0;
-    }
-
-    mysqli_stmt_bind_param($stmt, 'si', $nama_kategori, $id_kategori);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $duplikat = mysqli_num_rows($result) > 0;
-    mysqli_stmt_close($stmt);
-
-    if ($duplikat) {
-        return -2;
-    }
-
-    // Perbarui nama kategori.
-    $stmt = mysqli_prepare(
-        $db,
-        "UPDATE kategori
-         SET nama_kategori = ?
-         WHERE id_kategori = ?"
-    );
-
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal menyiapkan update kategori: ' . mysqli_error($db));
-        return 0;
-    }
-
-    mysqli_stmt_bind_param($stmt, 'si', $nama_kategori, $id_kategori);
-    $success = mysqli_stmt_execute($stmt);
-
-    if (!$success) {
-        $error_code = mysqli_stmt_errno($stmt);
-
-        error_log('[UKKinventory] Gagal mengedit kategori: ' . mysqli_stmt_error($stmt));
-
-        mysqli_stmt_close($stmt);
-
-        // 1062 adalah kode MySQL untuk nilai duplikat.
-        return $error_code === 1062 ? -2 : 0;
-    }
-
-    mysqli_stmt_close($stmt);
-
-    return 1;
-}
 function delete_kategori($id_kategori)
 {
     if (!has_role(['admin', 'petugas'])) {
         return 0;
     }
+
     global $db;
-    $id_kategori = filter_var($id_kategori, FILTER_VALIDATE_INT);
-    if ($id_kategori === false || $id_kategori === null || $id_kategori <= 0) {
+
+    $id_kategori = filter_var(
+        $id_kategori,
+        FILTER_VALIDATE_INT
+    );
+
+    if (
+        $id_kategori === false ||
+        $id_kategori === null ||
+        $id_kategori <= 0
+    ) {
         return 0;
     }
 
     // Periksa apakah kategori masih digunakan oleh barang.
     $cek = mysqli_prepare(
         $db,
-        "SELECT id_barang FROM barang WHERE id_kategori = ? LIMIT 1"
+        "SELECT id_barang
+         FROM barang
+         WHERE id_kategori = ?
+         LIMIT 1"
     );
-    if ($cek === false) {
-        error_log('[UKKinventory] Gagal menyiapkan pemeriksaan kategori: ' . mysqli_error($db));
-        return -1;
+
+    if (!$cek) {
+        error_log(
+            '[UKKinventory] Gagal menyiapkan pemeriksaan kategori: ' .
+            mysqli_error($db)
+        );
+        return 0;
     }
+
     mysqli_stmt_bind_param($cek, 'i', $id_kategori);
+
     if (!mysqli_stmt_execute($cek)) {
-        error_log('[UKKinventory] Gagal memeriksa penggunaan kategori: ' . mysqli_stmt_error($cek));
+        error_log(
+            '[UKKinventory] Gagal memeriksa penggunaan kategori: ' .
+            mysqli_stmt_error($cek)
+        );
         mysqli_stmt_close($cek);
-        return -1;
+        return 0;
     }
+
     mysqli_stmt_store_result($cek);
-    $ada_barang = mysqli_stmt_num_rows($cek) > 0;
+    $masih_dipakai = mysqli_stmt_num_rows($cek) > 0;
     mysqli_stmt_close($cek);
-    if ($ada_barang) {
+
+    // Jangan hapus kategori yang masih digunakan barang.
+    if ($masih_dipakai) {
         return -2;
     }
 
-    // Hapus kategori hanya jika tidak digunakan oleh barang.
+    // Hapus kategori jika tidak digunakan oleh barang.
     $stmt = mysqli_prepare(
         $db,
         "DELETE FROM kategori WHERE id_kategori = ?"
     );
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal menyiapkan penghapusan kategori: ' . mysqli_error($db));
-        return -1;
+
+    if (!$stmt) {
+        error_log(
+            '[UKKinventory] Gagal menyiapkan penghapusan kategori: ' .
+            mysqli_error($db)
+        );
+        return 0;
     }
+
     mysqli_stmt_bind_param($stmt, 'i', $id_kategori);
-    if (!mysqli_stmt_execute($stmt)) {
-        error_log('[UKKinventory] Gagal menghapus kategori: ' . mysqli_stmt_error($stmt));
-        mysqli_stmt_close($stmt);
-        return -1;
+
+    $berhasil = mysqli_stmt_execute($stmt);
+    $affected = $berhasil
+        ? mysqli_stmt_affected_rows($stmt)
+        : 0;
+
+    if (!$berhasil) {
+        error_log(
+            '[UKKinventory] Gagal menghapus kategori: ' .
+            mysqli_stmt_error($stmt)
+        );
     }
-    $affected = mysqli_stmt_affected_rows($stmt);
+
     mysqli_stmt_close($stmt);
-    return $affected > 0 ? 1 : 0;
+
+    return ($berhasil && $affected > 0) ? 1 : 0;
 }
 
-
-// == 3. LOKASI ==
+ // == 3. LOKASI ==
 
 function select_lokasi($query)
 {
     global $db;
+
     $result = mysqli_query($db, $query);
     $rows = [];
+
     if ($result) {
         while ($row = mysqli_fetch_assoc($result)) {
             $rows[] = $row;
         }
+
+        mysqli_free_result($result);
     }
+
     return $rows;
 }
 
 function create_lokasi($post)
 {
+    global $db;
+
     if (!has_role(['admin', 'petugas'])) {
         return 0;
     }
+
     $nama_lokasi = trim($post['nama'] ?? '');
-    if ($nama_lokasi === '') {
+
+    if ($nama_lokasi === '' || mb_strlen($nama_lokasi, 'UTF-8') > 30) {
         return 0;
     }
-    global $db;
+
+    // Periksa apakah nama lokasi sudah terdaftar.
+    $stmt = mysqli_prepare(
+        $db,
+        "SELECT id_lokasi
+         FROM lokasi
+         WHERE LOWER(TRIM(nama_lokasi)) = LOWER(TRIM(?))
+         LIMIT 1"
+    );
+
+    if (!$stmt) {
+        error_log('Gagal menyiapkan pemeriksaan lokasi: ' . mysqli_error($db));
+        return 0;
+    }
+
+    mysqli_stmt_bind_param($stmt, 's', $nama_lokasi);
+
+    if (!mysqli_stmt_execute($stmt)) {
+        error_log('Gagal memeriksa lokasi: ' . mysqli_stmt_error($stmt));
+        mysqli_stmt_close($stmt);
+        return 0;
+    }
+
+    mysqli_stmt_store_result($stmt);
+    $sudah_ada = mysqli_stmt_num_rows($stmt) > 0;
+    mysqli_stmt_close($stmt);
+
+    if ($sudah_ada) {
+        return -2;
+    }
+
+    // Simpan lokasi jika namanya belum terdaftar.
     $stmt = mysqli_prepare(
         $db,
         "INSERT INTO lokasi (nama_lokasi) VALUES (?)"
     );
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal menyiapkan query tambah lokasi: ' . mysqli_error($db));
+
+    if (!$stmt) {
+        error_log('Gagal menyiapkan penyimpanan lokasi: ' . mysqli_error($db));
         return 0;
     }
-    mysqli_stmt_bind_param($stmt, 's', $nama_lokasi);
-    $success = mysqli_stmt_execute($stmt);
-    $affected = $success ? mysqli_stmt_affected_rows($stmt) : 0;
-    if (!$success) {
-        error_log('[UKKinventory] Gagal menambahkan lokasi: ' . mysqli_stmt_error($stmt));
-    }
-    mysqli_stmt_close($stmt);
-    return $affected;
-}
 
+    mysqli_stmt_bind_param($stmt, 's', $nama_lokasi);
+    $berhasil = mysqli_stmt_execute($stmt);
+
+    if (!$berhasil) {
+        error_log('Gagal menambahkan lokasi: ' . mysqli_stmt_error($stmt));
+    }
+
+    $jumlah_data = $berhasil ? mysqli_stmt_affected_rows($stmt) : 0;
+    mysqli_stmt_close($stmt);
+
+    return ($berhasil && $jumlah_data > 0) ? 1 : 0;
+}
 
 function update_lokasi($post)
 {
@@ -470,75 +457,63 @@ function update_lokasi($post)
         return 0;
     }
 
-    $id_lokasi = (int)($post['id_lokasi'] ?? 0);
-    $nama_lokasi = trim($post['nama'] ?? '');
-
-    if ($id_lokasi <= 0 || $nama_lokasi === '') {
-        return 0;
-    }
-
     global $db;
 
-    // Pastikan lokasi yang akan diedit tersedia.
-    $stmt = mysqli_prepare(
+    $id_lokasi = filter_var(
+        $post['id_lokasi'] ?? null,
+        FILTER_VALIDATE_INT
+    );
+
+    $nama_lokasi = trim($post['nama'] ?? '');
+
+    if (
+        $id_lokasi === false ||
+        $id_lokasi === null ||
+        $id_lokasi <= 0 ||
+        $nama_lokasi === '' ||
+        mb_strlen($nama_lokasi) > 30
+    ) {
+        return 0;
+    }
+
+    // Cek apakah nama dipakai lokasi lain.
+    $cek = mysqli_prepare(
         $db,
         "SELECT id_lokasi
          FROM lokasi
-         WHERE id_lokasi = ?"
+         WHERE LOWER(TRIM(nama_lokasi)) = LOWER(TRIM(?))
+           AND id_lokasi != ?
+         LIMIT 1"
     );
 
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal memeriksa lokasi: ' . mysqli_error($db));
+    if (!$cek) {
+        error_log(
+            '[UKKinventory] Gagal menyiapkan pemeriksaan edit lokasi: ' .
+            mysqli_error($db)
+        );
         return 0;
     }
 
-    mysqli_stmt_bind_param($stmt, 'i', $id_lokasi);
-
-    if (!mysqli_stmt_execute($stmt)) {
-        error_log('[UKKinventory] Gagal memeriksa lokasi: ' . mysqli_stmt_error($stmt));
-        mysqli_stmt_close($stmt);
-        return 0;
-    }
-
-    $result = mysqli_stmt_get_result($stmt);
-    $lokasi_ada = mysqli_num_rows($result) > 0;
-    mysqli_stmt_close($stmt);
-
-    if (!$lokasi_ada) {
-        return 0;
-    }
-
-    // Periksa nama yang digunakan lokasi lain.
-    $stmt = mysqli_prepare(
-        $db,
-        "SELECT id_lokasi
-         FROM lokasi
-         WHERE nama_lokasi = ?
-         AND id_lokasi != ?"
+    mysqli_stmt_bind_param(
+        $cek,
+        'si',
+        $nama_lokasi,
+        $id_lokasi
     );
 
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal memeriksa duplikat lokasi: ' . mysqli_error($db));
+    if (!mysqli_stmt_execute($cek)) {
+        mysqli_stmt_close($cek);
         return 0;
     }
 
-    mysqli_stmt_bind_param($stmt, 'si', $nama_lokasi, $id_lokasi);
-
-    if (!mysqli_stmt_execute($stmt)) {
-        error_log('[UKKinventory] Gagal memeriksa duplikat lokasi: ' . mysqli_stmt_error($stmt));
-        mysqli_stmt_close($stmt);
-        return 0;
-    }
-
-    $result = mysqli_stmt_get_result($stmt);
-    $duplikat = mysqli_num_rows($result) > 0;
-    mysqli_stmt_close($stmt);
+    mysqli_stmt_store_result($cek);
+    $duplikat = mysqli_stmt_num_rows($cek) > 0;
+    mysqli_stmt_close($cek);
 
     if ($duplikat) {
         return -2;
     }
 
-    // Perbarui nama lokasi.
     $stmt = mysqli_prepare(
         $db,
         "UPDATE lokasi
@@ -546,28 +521,40 @@ function update_lokasi($post)
          WHERE id_lokasi = ?"
     );
 
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal menyiapkan query edit lokasi: ' . mysqli_error($db));
+    if (!$stmt) {
         return 0;
     }
 
-    mysqli_stmt_bind_param($stmt, 'si', $nama_lokasi, $id_lokasi);
+    mysqli_stmt_bind_param(
+        $stmt,
+        'si',
+        $nama_lokasi,
+        $id_lokasi
+    );
 
-    if (!mysqli_stmt_execute($stmt)) {
-        $error_code = mysqli_stmt_errno($stmt);
+    $berhasil = mysqli_stmt_execute($stmt);
 
-        error_log('[UKKinventory] Gagal mengedit lokasi: ' . mysqli_stmt_error($stmt));
-
-        mysqli_stmt_close($stmt);
-
-        return $error_code === 1062 ? -2 : 0;
+    if (!$berhasil) {
+        error_log(
+            '[UKKinventory] Gagal mengedit lokasi: ' .
+            mysqli_stmt_error($stmt)
+        );
     }
+
+    $affected = $berhasil
+        ? mysqli_stmt_affected_rows($stmt)
+        : 0;
 
     mysqli_stmt_close($stmt);
 
-    return 1;
-}
+    // Nilai 1 berarti data berubah.
+    // Nilai 0 juga bisa berarti nama tetap sama.
+    if ($berhasil) {
+        return 1;
+    }
 
+    return 0;
+}
 
 function delete_lokasi($id_lokasi)
 {
@@ -577,91 +564,74 @@ function delete_lokasi($id_lokasi)
 
     global $db;
 
-    $id_lokasi = filter_var($id_lokasi, FILTER_VALIDATE_INT);
+    $id_lokasi = filter_var(
+        $id_lokasi,
+        FILTER_VALIDATE_INT
+    );
 
-    if ($id_lokasi === false || $id_lokasi === null || $id_lokasi <= 0) {
+    if (
+        $id_lokasi === false ||
+        $id_lokasi === null ||
+        $id_lokasi <= 0
+    ) {
         return 0;
     }
 
-    // Pastikan lokasi tersedia.
+    // Jangan hapus lokasi yang masih dipakai barang.
     $cek = mysqli_prepare(
         $db,
-        "SELECT id_lokasi FROM lokasi WHERE id_lokasi = ? LIMIT 1"
+        "SELECT id_barang
+         FROM barang
+         WHERE id_lokasi = ?
+         LIMIT 1"
     );
 
-    if ($cek === false) {
-        error_log('[UKKinventory] Gagal menyiapkan pemeriksaan lokasi: ' . mysqli_error($db));
+    if (!$cek) {
         return 0;
     }
 
     mysqli_stmt_bind_param($cek, 'i', $id_lokasi);
 
     if (!mysqli_stmt_execute($cek)) {
-        error_log('[UKKinventory] Gagal memeriksa lokasi: ' . mysqli_stmt_error($cek));
         mysqli_stmt_close($cek);
         return 0;
     }
 
     mysqli_stmt_store_result($cek);
-    $lokasi_ada = mysqli_stmt_num_rows($cek) > 0;
+    $masih_dipakai = mysqli_stmt_num_rows($cek) > 0;
     mysqli_stmt_close($cek);
 
-    if (!$lokasi_ada) {
-        return 0;
-    }
-
-    // Jangan hapus lokasi yang masih digunakan oleh barang.
-    $cek = mysqli_prepare(
-        $db,
-        "SELECT id_barang FROM barang WHERE id_lokasi = ? LIMIT 1"
-    );
-
-    if ($cek === false) {
-        error_log('[UKKinventory] Gagal menyiapkan pemeriksaan barang: ' . mysqli_error($db));
-        return 0;
-    }
-
-    mysqli_stmt_bind_param($cek, 'i', $id_lokasi);
-
-    if (!mysqli_stmt_execute($cek)) {
-        error_log('[UKKinventory] Gagal memeriksa penggunaan lokasi: ' . mysqli_stmt_error($cek));
-        mysqli_stmt_close($cek);
-        return 0;
-    }
-
-    mysqli_stmt_store_result($cek);
-    $ada_barang = mysqli_stmt_num_rows($cek) > 0;
-    mysqli_stmt_close($cek);
-
-    if ($ada_barang) {
+    if ($masih_dipakai) {
         return -2;
     }
 
-    // Hapus lokasi jika tidak digunakan.
     $stmt = mysqli_prepare(
         $db,
         "DELETE FROM lokasi WHERE id_lokasi = ?"
     );
 
-    if ($stmt === false) {
-        error_log('[UKKinventory] Gagal menyiapkan penghapusan lokasi: ' . mysqli_error($db));
+    if (!$stmt) {
         return 0;
     }
 
     mysqli_stmt_bind_param($stmt, 'i', $id_lokasi);
 
     $berhasil = mysqli_stmt_execute($stmt);
-    $affected = $berhasil ? mysqli_stmt_affected_rows($stmt) : 0;
+    $affected = $berhasil
+        ? mysqli_stmt_affected_rows($stmt)
+        : 0;
 
     if (!$berhasil) {
-        error_log('[UKKinventory] Gagal menghapus lokasi: ' . mysqli_stmt_error($stmt));
+        error_log(
+            '[UKKinventory] Gagal menghapus lokasi: ' .
+            mysqli_stmt_error($stmt)
+        );
     }
 
     mysqli_stmt_close($stmt);
 
     return $berhasil && $affected > 0 ? 1 : 0;
 }
-
 
 // == 4. BARANG ==
 
@@ -778,44 +748,56 @@ function update_barang($post)
 
     global $db;
 
-    $id_barang  = filter_var(
+    $id_barang = filter_var(
         $post['id_barang'] ?? null,
         FILTER_VALIDATE_INT
     );
+
     $id_kategori = filter_var(
         $post['id_kategori'] ?? null,
         FILTER_VALIDATE_INT
     );
+
     $id_lokasi = filter_var(
         $post['id_lokasi'] ?? null,
         FILTER_VALIDATE_INT
     );
 
+    $stok = filter_var(
+        $post['stok'] ?? null,
+        FILTER_VALIDATE_INT
+    );
+
     $kode_barang = trim($post['kode_barang'] ?? '');
     $nama_barang = trim($post['nama_barang'] ?? '');
-    $satuan      = trim($post['satuan'] ?? '');
-    $kondisi     = $post['kondisi'] ?? '';
-    $keterangan  = trim($post['keterangan'] ?? '');
+    $satuan = trim($post['satuan'] ?? '');
+    $kondisi = $post['kondisi'] ?? '';
+    $keterangan = trim($post['keterangan'] ?? '');
 
     if (
-        !$id_barang || $id_barang <= 0 ||
-        !$id_kategori || $id_kategori <= 0 ||
-        !$id_lokasi || $id_lokasi <= 0 ||
+        $id_barang === false || $id_barang === null || $id_barang <= 0 ||
+        $id_kategori === false || $id_kategori === null || $id_kategori <= 0 ||
+        $id_lokasi === false || $id_lokasi === null || $id_lokasi <= 0 ||
+        $stok === false || $stok === null || $stok < 0 ||
         $kode_barang === '' ||
         $nama_barang === '' ||
         $satuan === '' ||
-        !in_array($kondisi, ['layak', 'tidak_layak', 'perbaikan'], true)
+        !in_array(
+            $kondisi,
+            ['layak', 'tidak_layak', 'perbaikan'],
+            true
+        )
     ) {
         return 0;
     }
 
-    // Cek nama barang lain yang memiliki nama sama.
+    // Cek nama barang duplikat, kecuali barang yang sedang diedit.
     $cek = mysqli_prepare(
         $db,
         "SELECT id_barang
          FROM barang
          WHERE LOWER(TRIM(nama_barang)) = LOWER(TRIM(?))
-         AND id_barang != ?
+           AND id_barang != ?
          LIMIT 1"
     );
 
@@ -823,7 +805,12 @@ function update_barang($post)
         return 0;
     }
 
-    mysqli_stmt_bind_param($cek, "si", $nama_barang, $id_barang);
+    mysqli_stmt_bind_param(
+        $cek,
+        'si',
+        $nama_barang,
+        $id_barang
+    );
 
     if (!mysqli_stmt_execute($cek)) {
         mysqli_stmt_close($cek);
@@ -838,39 +825,49 @@ function update_barang($post)
         return -2;
     }
 
-    // Perbarui data barang.
-    $query = mysqli_prepare(
+    // Perbarui seluruh data barang, termasuk stok.
+    $stmt = mysqli_prepare(
         $db,
         "UPDATE barang
          SET id_kategori = ?,
              id_lokasi = ?,
              kode_barang = ?,
              nama_barang = ?,
+             stok = ?,
              satuan = ?,
              kondisi = ?,
              keterangan = ?
          WHERE id_barang = ?"
     );
 
-    if (!$query) {
+    if (!$stmt) {
         return 0;
     }
 
     mysqli_stmt_bind_param(
-        $query,
-        "iisssssi",
+        $stmt,
+        'iississsi',
         $id_kategori,
         $id_lokasi,
         $kode_barang,
         $nama_barang,
+        $stok,
         $satuan,
         $kondisi,
         $keterangan,
         $id_barang
     );
 
-    $berhasil = mysqli_stmt_execute($query);
-    mysqli_stmt_close($query);
+    $berhasil = mysqli_stmt_execute($stmt);
+
+    if (!$berhasil) {
+        error_log(
+            '[UKKinventory] Gagal memperbarui barang: ' .
+            mysqli_stmt_error($stmt)
+        );
+    }
+
+    mysqli_stmt_close($stmt);
 
     return $berhasil ? 1 : 0;
 }
@@ -1010,12 +1007,13 @@ function create_peminjaman($post)
     );
     $nama_peminjam = trim($post['nama_peminjam'] ?? '');
     $tanggal_pinjam = $post['tanggal_pinjam'] ?? '';
+    $tanggal_kembali_post = trim($post['tanggal_kembali'] ?? '');
 
     if (
         !$id_barang || $id_barang < 1 ||
         !$jumlah || $jumlah < 1 ||
         $nama_peminjam === '' ||
-        strlen($nama_peminjam) > 100 ||
+        strlen($nama_peminjam) > 50 ||
         !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_pinjam)
     ) {
         return 0;
@@ -1026,25 +1024,29 @@ function create_peminjaman($post)
         explode('-', $tanggal_pinjam)
     );
 
-    if (!checkdate($bulan, $hari, $tahun)) {
+    if (!checkdate($bulan, $hari, $tahun) || $tanggal_pinjam < date('Y-m-d')) {
         return 0;
     }
 
-    $id_user = (int) ($_SESSION['id_user'] ?? 0);
-
-    // Admin boleh memilih pengguna melalui form.
-    if (has_role('admin')) {
-        $id_user_post = filter_var(
-            $post['id_user'] ?? null,
-            FILTER_VALIDATE_INT
-        );
-
-        if (!$id_user_post || $id_user_post < 1) {
+    $tanggal_kembali = null;
+    if ($tanggal_kembali_post !== '') {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_kembali_post)) {
             return 0;
         }
-
-        $id_user = $id_user_post;
+        [$tk_tahun, $tk_bulan, $tk_hari] = array_map(
+            'intval',
+            explode('-', $tanggal_kembali_post)
+        );
+        if (!checkdate($tk_bulan, $tk_hari, $tk_tahun)) {
+            return 0;
+        }
+        if ($tanggal_kembali_post < $tanggal_pinjam) {
+            return 0;
+        }
+        $tanggal_kembali = $tanggal_kembali_post;
     }
+
+    $id_user = (int) ($_SESSION['id_user'] ?? 0);
 
     if ($id_user < 1) {
         return 0;
@@ -1098,20 +1100,21 @@ function create_peminjaman($post)
             $db,
             "INSERT INTO peminjaman
                 (id_barang, nama_peminjam, tanggal_pinjam,
-                 jumlah, status, id_user, tanggal_kembali,
-                 kondisi_kembali)
-             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)"
+                jumlah, status, id_user,
+                tanggal_kembali, kondisi_kembali)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL)"
         );
 
         mysqli_stmt_bind_param(
             $stmt,
-            'issisi',
+            'issisis',
             $id_barang,
             $nama_peminjam,
             $tanggal_pinjam,
             $jumlah,
             $status,
-            $id_user
+            $id_user,
+            $tanggal_kembali
         );
 
         if (!mysqli_stmt_execute($stmt)) {
@@ -1199,7 +1202,7 @@ function kembalikan_peminjaman($post)
     try {
         $stmt = mysqli_prepare(
             $db,
-            "SELECT id_barang, jumlah
+            "SELECT id_barang, jumlah, tanggal_pinjam
              FROM peminjaman
              WHERE id_pinjam = ? AND status = 'dipinjam'
              FOR UPDATE"
@@ -1211,6 +1214,12 @@ function kembalikan_peminjaman($post)
         mysqli_stmt_close($stmt);
 
         if (!$pinjaman) {
+            mysqli_rollback($db);
+            return 0;
+        }
+
+        // Tanggal kembali tidak boleh sebelum tanggal pinjam.
+        if ($tanggal_kembali < $pinjaman['tanggal_pinjam']) {
             mysqli_rollback($db);
             return 0;
         }
@@ -1289,7 +1298,7 @@ function update_peminjaman($post)
     if (
         !$id_pinjam || $id_pinjam < 1 ||
         $nama_peminjam === '' ||
-        strlen($nama_peminjam) > 100 ||
+        strlen($nama_peminjam) > 50 ||
         !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_pinjam)
     ) {
         return 0;
@@ -1320,9 +1329,10 @@ function update_peminjaman($post)
     );
 
     $success = mysqli_stmt_execute($stmt);
+    $affected = mysqli_stmt_affected_rows($stmt);
     mysqli_stmt_close($stmt);
 
-    return $success ? 1 : 0;
+    return ($success && $affected > 0) ? 1 : 0;
 }
 
 function delete_peminjaman($id_pinjam)

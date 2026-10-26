@@ -6,9 +6,11 @@ check_role(['admin', 'petugas']);
 $id_pinjam = (int)($_GET['id_pinjam'] ?? 0);
 
 $peminjaman_data = select_peminjaman(
-    "SELECT p.*, b.nama_barang, b.kode_barang
+    "SELECT p.*, b.nama_barang, b.kode_barang,
+    u.nama AS nama_petugas, u.role AS role_petugas
     FROM peminjaman p
     JOIN barang b ON p.id_barang = b.id_barang
+    LEFT JOIN users u ON p.id_user = u.id_user
     WHERE p.id_pinjam = $id_pinjam"
 );
 
@@ -49,6 +51,7 @@ include_once '../../layout/header.php';
 
 ?>
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
+
 <div class="container-fluid py-2">
     <div class="card shadow-sm">
         <div class="card-header bg-success text-white">
@@ -71,20 +74,60 @@ include_once '../../layout/header.php';
 
                     <div class="col-md-6 mb-3">
                         <label for="nama_peminjam" class="form-label fw-bold">Nama Peminjam</label>
-                        <input type="text" class="form-control" id="nama_peminjam" name="nama_peminjam" value="<?= htmlspecialchars($pinjam['nama_peminjam']); ?>" required>
+                        <input type="text" class="form-control" id="nama_peminjam" name="nama_peminjam" value="<?= htmlspecialchars($pinjam['nama_peminjam']); ?>" maxlength="50" required>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="tanggal_pinjam" class="form-label fw-bold">Tanggal Pinjam</label>
-                        <input type="date" class="form-control" id="tanggal_pinjam" name="tanggal_pinjam" value="<?= $pinjam['tanggal_pinjam']; ?>" required>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="tanggal_pinjam"
+                            name="tanggal_pinjam"
+                            value="<?= htmlspecialchars($pinjam['tanggal_pinjam']); ?>"
+                            readonly
+                        >
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">Jumlah Pinjam</label>
                         <input type="number" class="form-control" value="<?= $pinjam['jumlah']; ?>" disabled>
                         <div class="form-text">Jumlah pinjam tidak dapat diubah setelah stok dikurangi.</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="tanggal_kembali" class="form-label fw-bold">Tanggal Kembali</label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="tanggal_kembali"
+                            value="<?= !empty($pinjam['tanggal_kembali']) ? htmlspecialchars($pinjam['tanggal_kembali']) : ''; ?>"
+                            placeholder="Belum dikembalikan"
+                            readonly
+                        >
+                        <div class="form-text">Belum dikembalikan, diisi melalui menu Pengembalian.</div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Petugas Pencatat</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="<?= htmlspecialchars(
+                                ($pinjam['nama_petugas'] ?? '-') .
+                                (isset($pinjam['role_petugas']) && $pinjam['role_petugas'] !== ''
+                                    ? ' (' . $pinjam['role_petugas'] . ')'
+                                    : ''),
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ); ?>"
+                            readonly
+                        >
+                        <div class="form-text">Pencatat awal tidak dapat diubah.</div>
                     </div>
                 </div>
 

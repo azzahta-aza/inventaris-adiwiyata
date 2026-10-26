@@ -24,6 +24,48 @@ if ($status !== '') {
 
 $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
+// Hitung total data
+$sql_count_peminjaman = "SELECT COUNT(*) AS total
+                         FROM peminjaman p
+                         LEFT JOIN barang b ON p.id_barang = b.id_barang
+                         LEFT JOIN users u ON p.id_user = u.id_user
+                         $where_sql";
+$result_count_peminjaman = mysqli_query($db, $sql_count_peminjaman);
+$total_data_peminjaman = 0;
+if ($result_count_peminjaman) {
+    $row_count_peminjaman = mysqli_fetch_assoc($result_count_peminjaman);
+    $total_data_peminjaman = (int) ($row_count_peminjaman['total'] ?? 0);
+}
+
+// Pengaturan pagination
+$limit = 10;
+$total_pages_peminjaman = max(1, (int) ceil($total_data_peminjaman / $limit));
+
+$current_page_peminjaman = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+$current_page_peminjaman = ($current_page_peminjaman !== false && $current_page_peminjaman !== null)
+    ? max(1, min($current_page_peminjaman, $total_pages_peminjaman))
+    : 1;
+
+$offset_peminjaman = ($current_page_peminjaman - 1) * $limit;
+
+$pagination = [
+    'page' => $current_page_peminjaman,
+    'total_pages' => $total_pages_peminjaman,
+    'total' => $total_data_peminjaman,
+    'from' => $total_data_peminjaman > 0 ? $offset_peminjaman + 1 : 0,
+    'to' => min($offset_peminjaman + $limit, $total_data_peminjaman)
+];
+
+$pagination_params = [];
+if ($tgl_mulai !== '') {
+    $pagination_params['tgl_mulai'] = $tgl_mulai;
+}
+if ($tgl_sampai !== '') {
+    $pagination_params['tgl_sampai'] = $tgl_sampai;
+}
+if ($status !== '') {
+    $pagination_params['status'] = $status;
+}
 
 $query_peminjaman = "SELECT
     p.*,
@@ -35,7 +77,8 @@ FROM peminjaman p
 LEFT JOIN barang b ON p.id_barang = b.id_barang
 LEFT JOIN users u ON p.id_user = u.id_user
 $where_sql
-ORDER BY p.tanggal_pinjam DESC";
+ORDER BY p.tanggal_pinjam DESC, p.id_pinjam DESC
+LIMIT $limit OFFSET $offset_peminjaman";
 
 $result_peminjaman = mysqli_query($db, $query_peminjaman);
 $data_peminjaman = [];
@@ -115,7 +158,7 @@ if ($result_peminjaman) {
                                 <td colspan="9" class="text-muted py-4">Tidak ada data peminjaman yang cocok.</td>
                             </tr>
                         <?php else : ?>
-                            <?php $no = 1; ?>
+                            <?php $no = $offset_peminjaman + 1; ?>
                             <?php foreach ($data_peminjaman as $p) : ?>
                                 <tr class="text-center">
                                     <td><?= $no++; ?></td>
@@ -127,7 +170,7 @@ if ($result_peminjaman) {
                                     <td>
                                         <?= ($p['status'] === 'dipinjam') ? '<span class="badge bg-warning text-dark">Dipinjam</span>' : '<span class="badge bg-success">Dikembalikan</span>'; ?>
                                     </td>
-                                    <td><?= htmlspecialchars($p['kondisi_kembali'] ?? '-'); ?></td>
+                                    <td><?= htmlspecialchars($p['kondisi_kembali'] ?? 'belum dikembalikan (-)'); ?></td>
                                     <td><?= htmlspecialchars($p['nama_petugas'] ?? '-'); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -135,6 +178,7 @@ if ($result_peminjaman) {
                     </tbody>
                 </table>
             </div>
+            <?php include '../../layout/pagination.php'; ?>
         </div>
     </div>
 </div>

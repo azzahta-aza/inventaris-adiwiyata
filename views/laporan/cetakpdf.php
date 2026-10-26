@@ -15,6 +15,8 @@ $validasi_tanggal = static function ($tgl) {
 };
 
 // Ambil data sesuai tipe laporan
+
+//PEMINJAMAN
 if ($tipe === 'peminjaman') {
     $judul_laporan = 'LAPORAN PEMINJAMAN BARANG';
 
@@ -69,6 +71,7 @@ if ($tipe === 'peminjaman') {
         die("Gagal mengambil data laporan peminjaman.");
     }
 
+//TRANSAKSI
 } elseif ($tipe === 'transaksi') {
     $judul_laporan = 'LAPORAN MUTASI TRANSAKSI BARANG';
 
@@ -80,22 +83,50 @@ if ($tipe === 'peminjaman') {
     $jenis_diizinkan = ['masuk', 'keluar'];
     $jenis = (isset($_GET['jenis']) && is_string($_GET['jenis']) && in_array(strtolower($_GET['jenis']), $jenis_diizinkan, true))
              ? strtolower($_GET['jenis']) : '';
-
+   
     $where_clauses = [];
+
     if ($tgl_mulai !== '' && $tgl_sampai !== '') {
         $where_clauses[] = "t.tanggal BETWEEN '$tgl_mulai' AND '$tgl_sampai'";
+    } elseif ($tgl_mulai !== '') {
+        $where_clauses[] = "t.tanggal >= '$tgl_mulai'";
+    } elseif ($tgl_sampai !== '') {
+        $where_clauses[] = "t.tanggal <= '$tgl_sampai'";
     }
+
     if ($jenis !== '') {
         $where_clauses[] = "LOWER(t.jenis_transaksi) = '$jenis'";
     }
-    $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
+   
+    $where_sql = count($where_clauses) > 0
+        ? "WHERE " . implode(" AND ", $where_clauses)
+        : "";
 
-    $data = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas
-                            FROM transaksi t
-                            LEFT JOIN barang b ON t.id_barang = b.id_barang
-                            LEFT JOIN users u ON t.id_user = u.id_user
-                            $where_sql
-                            ORDER BY t.tanggal DESC");
+    $query_transaksi = "SELECT
+        t.*,
+        b.kode_barang,
+        b.nama_barang,
+        b.satuan,
+        u.nama AS nama_petugas
+    FROM transaksi t
+    LEFT JOIN barang b ON t.id_barang = b.id_barang
+    LEFT JOIN users u ON t.id_user = u.id_user
+    $where_sql
+    ORDER BY t.tanggal DESC";
+
+    $result_transaksi = mysqli_query($db, $query_transaksi);
+    $data = [];
+
+    if ($result_transaksi) {
+        while ($row = mysqli_fetch_assoc($result_transaksi)) {
+            $data[] = $row;
+        }
+    } else {
+        error_log('[UKKinventory] Query laporan transaksi gagal: ' . mysqli_error($db));
+        die("Gagal mengambil data laporan transaksi.");
+    }
+
+//KATEGORI
 } elseif ($tipe === 'kategori') {
     $judul_laporan = 'LAPORAN REKAPITULASI KATEGORI BARANG';
     $data = select_kategori("SELECT k.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
@@ -103,6 +134,8 @@ if ($tipe === 'peminjaman') {
                             LEFT JOIN barang b ON k.id_kategori = b.id_kategori
                             GROUP BY k.id_kategori
                             ORDER BY k.nama_kategori ASC");
+
+//LOKASI
 } elseif ($tipe === 'lokasi') {
     $judul_laporan = 'LAPORAN REKAPITULASI LOKASI RUANGAN';
     $data = select_lokasi("SELECT l.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
@@ -111,44 +144,82 @@ if ($tipe === 'peminjaman') {
                           GROUP BY l.id_lokasi
                           ORDER BY l.nama_lokasi ASC");
 } else {
+//BARANG
     // Default: Barang
     $judul_laporan = 'LAPORAN INVENTARIS BARANG';
 
-    // id_kategori harus integer valid (tidak boleh array)
-    $filter_kategori = (isset($_GET['id_kategori']) && is_numeric($_GET['id_kategori']))
-                       ? (int)$_GET['id_kategori'] : 0;
+    // Ambil dan validasi filter kategori
+    $filter_kategori = (
+        isset($_GET['id_kategori']) &&
+        is_string($_GET['id_kategori']) &&
+        ctype_digit($_GET['id_kategori'])
+    ) ? (int)$_GET['id_kategori'] : 0;
 
-    // Whitelist kondisi barang yang diizinkan
+    // Ambil dan validasi filter lokasi
+    $filter_lokasi = (
+        isset($_GET['id_lokasi']) &&
+        is_string($_GET['id_lokasi']) &&
+        ctype_digit($_GET['id_lokasi'])
+    ) ? (int)$_GET['id_lokasi'] : 0;
+
+    // Validasi kondisi barang
     $kondisi_diizinkan = ['layak', 'tidak_layak', 'perbaikan'];
-    $filter_kondisi = (isset($_GET['kondisi']) && is_string($_GET['kondisi']) && in_array($_GET['kondisi'], $kondisi_diizinkan, true))
-                      ? $_GET['kondisi'] : '';
+
+    $filter_kondisi = (
+        isset($_GET['kondisi']) &&
+        is_string($_GET['kondisi']) &&
+        in_array($_GET['kondisi'], $kondisi_diizinkan, true)
+    ) ? $_GET['kondisi'] : '';
 
     $where_clauses = [];
+
     if ($filter_kategori > 0) {
         $where_clauses[] = "b.id_kategori = $filter_kategori";
     }
+
+    if ($filter_lokasi > 0) {
+        $where_clauses[] = "b.id_lokasi = $filter_lokasi";
+    }
+
     if ($filter_kondisi !== '') {
         $where_clauses[] = "b.kondisi = '$filter_kondisi'";
     }
-    $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
-    $data = select_barang("SELECT b.*, k.nama_kategori, l.nama_lokasi
-                          FROM barang b
-                          LEFT JOIN kategori k ON b.id_kategori = k.id_kategori
-                          LEFT JOIN lokasi l ON b.id_lokasi = l.id_lokasi
-                          $where_sql
-                          ORDER BY b.nama_barang ASC");
+    $where_sql = count($where_clauses) > 0
+        ? "WHERE " . implode(" AND ", $where_clauses)
+        : "";
+    
+    $query_barang = "SELECT
+        b.*,
+        k.nama_kategori,
+        l.nama_lokasi
+    FROM barang b
+    LEFT JOIN kategori k ON b.id_kategori = k.id_kategori
+    LEFT JOIN lokasi l ON b.id_lokasi = l.id_lokasi
+    $where_sql
+    ORDER BY b.nama_barang ASC";
+
+    $result_barang = mysqli_query($db, $query_barang);
+    $data = [];
+
+    if ($result_barang) {
+        while ($row = mysqli_fetch_assoc($result_barang)) {
+            $data[] = $row;
+        }
+    } else {
+        error_log('[UKKinventory] Query laporan barang gagal: ' . mysqli_error($db));
+        die("Gagal mengambil data laporan barang.");
+    }
 }
 
-
 ?>
-<link rel="icon" type="image/png" href="../../img/logo_white.png">
 <!doctype html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $judul_laporan; ?> - PDF Export</title>
+    <link rel="icon" type="image/png" href="../../img/logo_white.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- html2pdf.js CDN -->
@@ -169,6 +240,9 @@ if ($tipe === 'peminjaman') {
             border-bottom: 3px double #000;
             margin-bottom: 20px;
             padding-bottom: 12px;
+        }
+        .header-kop img {
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
         }
         @media (max-width: 768px) {
             .page-container {
@@ -200,12 +274,17 @@ if ($tipe === 'peminjaman') {
 </div>
 
 <div class="page-container" id="pdf-content">
-    <div class="text-center header-kop">
-        <h3 class="mb-0 fw-bold text-uppercase"><?= $judul_laporan; ?></h3>
-        <p class="mb-0 text-muted">Sistem Manajemen & Pengelolaan Sarana Prasarana Inventory</p>
-        <small class="text-muted">Tanggal Cetak: <?= date('d F Y'); ?></small>
+    <div class="header-kop d-flex align-items-center gap-3">
+        <img src="../../favicon.ico" alt="Logo" style="width:80px;height:80px;object-fit:contain;">
+        <div class="flex-grow-1 text-center">
+            <h3 class="mb-0 fw-bold text-uppercase"><?= $judul_laporan; ?></h3>
+            <p class="mb-0 text-muted">Sistem Manajemen & Pengelolaan Sarana Prasarana Inventory</p>
+            <small class="text-muted">Tanggal Cetak: <?= date('d F Y'); ?></small>
+        </div>
+        <div style="width:70px;"></div>
     </div>
 
+    <!-- PEMINJAMAN -->
     <?php if ($tipe === 'peminjaman') : ?>
         <table class="table table-bordered table-sm align-middle">
             <thead class="text-center table-light">

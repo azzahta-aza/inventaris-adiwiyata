@@ -5,11 +5,47 @@ check_role(['admin', 'kepala']);
 
 include_once '../../layout/header.php';
 
+$sql_lokasi_base = "SELECT l.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
+                    FROM lokasi l
+                    LEFT JOIN barang b ON l.id_lokasi = b.id_lokasi
+                    GROUP BY l.id_lokasi";
+
+// Hitung total data
+$sql_count_lokasi = "SELECT COUNT(*) AS total FROM ($sql_lokasi_base) AS sub";
+$result_count_lokasi = mysqli_query($db, $sql_count_lokasi);
+$total_data_lokasi = 0;
+if ($result_count_lokasi) {
+    $row_count_lokasi = mysqli_fetch_assoc($result_count_lokasi);
+    $total_data_lokasi = (int) ($row_count_lokasi['total'] ?? 0);
+}
+
+// Pengaturan pagination
+$limit = 10;
+$total_pages_lokasi = max(1, (int) ceil($total_data_lokasi / $limit));
+
+$current_page_lokasi = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+$current_page_lokasi = ($current_page_lokasi !== false && $current_page_lokasi !== null)
+    ? max(1, min($current_page_lokasi, $total_pages_lokasi))
+    : 1;
+
+$offset_lokasi = ($current_page_lokasi - 1) * $limit;
+
+$pagination = [
+    'page' => $current_page_lokasi,
+    'total_pages' => $total_pages_lokasi,
+    'total' => $total_data_lokasi,
+    'from' => $total_data_lokasi > 0 ? $offset_lokasi + 1 : 0,
+    'to' => min($offset_lokasi + $limit, $total_data_lokasi)
+];
+
+$pagination_params = [];
+
 $data_lokasi = select_lokasi("SELECT l.*, COUNT(b.id_barang) as total_barang, COALESCE(SUM(b.stok), 0) as total_stok
                               FROM lokasi l
                               LEFT JOIN barang b ON l.id_lokasi = b.id_lokasi
                               GROUP BY l.id_lokasi
-                              ORDER BY l.nama_lokasi ASC");
+                              ORDER BY l.nama_lokasi ASC
+                              LIMIT $limit OFFSET $offset_lokasi");
 
 ?>
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
@@ -44,7 +80,7 @@ $data_lokasi = select_lokasi("SELECT l.*, COUNT(b.id_barang) as total_barang, CO
                                 <td colspan="4" class="text-muted py-4">Belum ada data lokasi.</td>
                             </tr>
                         <?php else : ?>
-                            <?php $no = 1; ?>
+                            <?php $no = $offset_lokasi + 1; ?>
                             <?php foreach ($data_lokasi as $l) : ?>
                                 <tr>
                                     <td><?= $no++; ?></td>
@@ -57,6 +93,7 @@ $data_lokasi = select_lokasi("SELECT l.*, COUNT(b.id_barang) as total_barang, CO
                     </tbody>
                 </table>
             </div>
+            <?php include '../../layout/pagination.php'; ?>
         </div>
     </div>
 </div>

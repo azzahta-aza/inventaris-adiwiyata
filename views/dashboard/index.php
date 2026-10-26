@@ -60,9 +60,9 @@ $layak_cnt = (int)($summary['kondisi_layak'] ?? 0);
 $perbaikan_cnt = (int)($summary['kondisi_perbaikan'] ?? 0);
 $tidak_layak_cnt = (int)($summary['kondisi_tidak_layak'] ?? 0);
 
-$layak_pct = $tot_brg > 0 ? round(($layak_cnt / $tot_brg) * 100) : 0;
-$perbaikan_pct = $tot_brg > 0 ? round(($perbaikan_cnt / $tot_brg) * 100) : 0;
-$tidak_layak_pct = $tot_brg > 0 ? round(($tidak_layak_cnt / $tot_brg) * 100) : 0;
+$layak_pct = $tot_brg > 0 ? round(($layak_cnt / $tot_brg) ) : 0;
+$perbaikan_pct = $tot_brg >  0 ? round(($perbaikan_cnt / $tot_brg) ): 0;
+$tidak_layak_pct = $tot_brg > 0 ? round(($tidak_layak_cnt / $tot_brg) ) : 0;
 
 // Format waktu & tanggal Indonesia
 $hour = (int)date('H');

@@ -24,12 +24,56 @@ if ($jenis !== '') {
 
 $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
+// Hitung total data
+$sql_count_transaksi = "SELECT COUNT(*) AS total
+                        FROM transaksi t
+                        LEFT JOIN barang b ON t.id_barang = b.id_barang
+                        LEFT JOIN users u ON t.id_user = u.id_user
+                        $where_sql";
+$result_count_transaksi = mysqli_query($db, $sql_count_transaksi);
+$total_data_transaksi = 0;
+if ($result_count_transaksi) {
+    $row_count_transaksi = mysqli_fetch_assoc($result_count_transaksi);
+    $total_data_transaksi = (int) ($row_count_transaksi['total'] ?? 0);
+}
+
+// Pengaturan pagination
+$limit = 10;
+$total_pages_transaksi = max(1, (int) ceil($total_data_transaksi / $limit));
+
+$current_page_transaksi = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+$current_page_transaksi = ($current_page_transaksi !== false && $current_page_transaksi !== null)
+    ? max(1, min($current_page_transaksi, $total_pages_transaksi))
+    : 1;
+
+$offset_transaksi = ($current_page_transaksi - 1) * $limit;
+
+$pagination = [
+    'page' => $current_page_transaksi,
+    'total_pages' => $total_pages_transaksi,
+    'total' => $total_data_transaksi,
+    'from' => $total_data_transaksi > 0 ? $offset_transaksi + 1 : 0,
+    'to' => min($offset_transaksi + $limit, $total_data_transaksi)
+];
+
+$pagination_params = [];
+if ($tgl_mulai !== '') {
+    $pagination_params['tgl_mulai'] = $tgl_mulai;
+}
+if ($tgl_sampai !== '') {
+    $pagination_params['tgl_sampai'] = $tgl_sampai;
+}
+if ($jenis !== '') {
+    $pagination_params['jenis'] = $jenis;
+}
+
 $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.satuan, u.nama AS nama_petugas
                                     FROM transaksi t
                                     LEFT JOIN barang b ON t.id_barang = b.id_barang
                                     LEFT JOIN users u ON t.id_user = u.id_user
                                     $where_sql
-                                    ORDER BY t.tanggal DESC");
+                                    ORDER BY t.tanggal DESC, t.id_transaksi DESC
+                                    LIMIT $limit OFFSET $offset_transaksi");
 
 ?>
 <link rel="icon" type="image/png" href="../../img/logo_white.png">
@@ -96,7 +140,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                                 <td colspan="7" class="text-muted py-4">Tidak ada data transaksi yang cocok.</td>
                             </tr>
                         <?php else : ?>
-                            <?php $no = 1; ?>
+                            <?php $no = $offset_transaksi + 1; ?>
                             <?php foreach ($data_transaksi as $t) : ?>
                                 <tr class="text-center">
                                     <td><?= $no++; ?></td>
@@ -116,6 +160,7 @@ $data_transaksi = select_transaksi("SELECT t.*, b.kode_barang, b.nama_barang, b.
                     </tbody>
                 </table>
             </div>
+            <?php include '../../layout/pagination.php'; ?>
         </div>
     </div>
 </div>
